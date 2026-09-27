@@ -49,6 +49,9 @@ export async function POST(req: NextRequest) {
           bytes[i] = binaryString.charCodeAt(i);
         }
 
+        const isFastModel = cfModel.includes('lightning') || cfModel.includes('lcm') || cfModel.includes('turbo');
+        const safeNumSteps = isFastModel ? 8 : 20;
+
         const cfRes = await fetchWithRetry(cfEndpoint, {
           method: 'POST',
           headers: {
@@ -59,7 +62,7 @@ export async function POST(req: NextRequest) {
             prompt: prompt.trim(),
             image: Array.from(bytes),
             strength: Number(strength) || 0.65,
-            num_steps: 25,
+            num_steps: safeNumSteps,
           }),
           timeoutMs: 35000,
           maxRetries: 2,

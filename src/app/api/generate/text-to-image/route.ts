@@ -108,15 +108,25 @@ export async function POST(req: NextRequest) {
           const cfModel = model.startsWith('@cf/') ? model : '@cf/stabilityai/stable-diffusion-xl-base-1.0';
           const cfEndpoint = `https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/ai/run/${cfModel}`;
 
+          // Sanitize num_steps specifically for Cloudflare Workers AI limits:
+          // - Lightning / LCM models: 4 ~ 8 steps
+          // - SDXL / base models: 1 ~ 20 steps max on Cloudflare AI API
+          const isFastModel = cfModel.includes('lightning') || cfModel.includes('lcm') || cfModel.includes('turbo');
+          const maxCfSteps = isFastModel ? 8 : 20;
+          const safeCfSteps = Math.min(Math.max(Number(steps) || (isFastModel ? 4 : 20), 1), maxCfSteps);
+
           const cfPayload: any = {
             prompt: prompt.trim(),
             negative_prompt: negativePrompt,
             width: resBucket.width,
             height: resBucket.height,
-            num_steps: Math.min(Math.max(Number(steps) || 25, 1), 50),
-            guidance: Number(guidance) || 7.0,
+            num_steps: safeCfSteps,
+            guidance: Number(guidance) || 7.5,
             seed: currentSeed,
           };
+
+          // Dynamic timeout based on sampling steps (up to 50s for high step requests)
+          const dynamicTimeout = Math.max(35000, Number(steps) * 1000);
 
           // Exponential backoff retries (3 attempts) on 429/timeouts
           const cfResponse = await fetchWithRetry(cfEndpoint, {
@@ -126,7 +136,7 @@ export async function POST(req: NextRequest) {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(cfPayload),
-            timeoutMs: 30000,
+            timeoutMs: dynamicTimeout,
             maxRetries: 3,
           });
 
@@ -156,6 +166,7 @@ export async function POST(req: NextRequest) {
       // 2. SiliconFlow Failover
       if (siliconApiKey) {
         try {
+          const dynamicTimeout = Math.max(35000, Number(steps) * 1000);
           const siliconRes = await fetchWithRetry('https://api.siliconflow.cn/v1/image/generations', {
             method: 'POST',
             headers: {
@@ -172,7 +183,7 @@ export async function POST(req: NextRequest) {
               num_inference_steps: Math.min(Number(steps) || 25, 50),
               guidance_scale: Number(guidance) || 7.0,
             }),
-            timeoutMs: 30000,
+            timeoutMs: dynamicTimeout,
             maxRetries: 2,
           });
 
@@ -189,12 +200,13 @@ export async function POST(req: NextRequest) {
 
       // 3. Pollinations High Quality Free Pool Failover
       try {
+        const dynamicTimeout = Math.max(35000, Number(steps) * 1000);
         const encodedPrompt = encodeURIComponent(prompt.trim());
         const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${resBucket.width}&height=${resBucket.height}&seed=${currentSeed}&nologo=true&enhance=true&safe=${!enableNsfw}&model=flux`;
 
         const polResponse = await fetchWithRetry(pollinationsUrl, {
           headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FoxAI/3.0)' },
-          timeoutMs: 35000,
+          timeoutMs: dynamicTimeout,
           maxRetries: 3,
         });
 

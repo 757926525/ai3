@@ -102,7 +102,7 @@ export const Txt2ImgTab: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: currentPrompt,
-          targetLang: 'en',
+          targetLang: 'mutual',
           cfApiToken: settings.cfApiToken,
           cfAccountId: settings.cfAccountId,
         }),
@@ -110,7 +110,7 @@ export const Txt2ImgTab: React.FC = () => {
       const json = await res.json();
       if (json.success && json.data?.translatedText) {
         setCurrentPrompt(json.data.translatedText);
-        showToast('已成功一键智能翻译！', 'success');
+        showToast('已成功一键中英双向互译！', 'success');
       } else {
         showToast(json.error || '翻译未完成', 'error');
       }

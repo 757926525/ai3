@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
   try {
     const {
       text,
-      targetLang = 'en',
+      targetLang = 'mutual',
       cfApiToken: clientCfToken,
       cfAccountId: clientCfAccount,
       customChatKey,
@@ -21,6 +21,18 @@ export async function POST(req: NextRequest) {
     const cfApiToken = clientCfToken || process.env.CLOUDFLARE_API_TOKEN;
     const cfAccountId = clientCfAccount || process.env.CLOUDFLARE_ACCOUNT_ID;
 
+    // Detect if input contains Chinese characters
+    const hasChinese = /[\u4e00-\u9fa5]/.test(cleanText);
+
+    // Auto-detect direction for mutual translation
+    let finalTargetLang = targetLang;
+    if (targetLang === 'mutual' || targetLang === 'auto') {
+      finalTargetLang = hasChinese ? 'en' : 'zh';
+    } else if (targetLang === 'en' && !hasChinese) {
+      // If user requested default translation but text is already English, toggle to Chinese
+      finalTargetLang = 'zh';
+    }
+
     const targetLangMap: Record<string, string> = {
       en: 'English',
       zh: 'Simplified Chinese',
@@ -32,7 +44,7 @@ export async function POST(req: NextRequest) {
       ru: 'Russian',
     };
 
-    const targetLangName = targetLangMap[targetLang] || 'English';
+    const targetLangName = targetLangMap[finalTargetLang] || 'English';
 
     // 1. Cloudflare LLM Multi-Language Translation
     if (cfApiToken && cfAccountId) {
@@ -71,7 +83,8 @@ export async function POST(req: NextRequest) {
 
     // 2. Open Translation API Fallback
     try {
-      const myMemoryUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(cleanText)}&langpair=autodetect|${targetLang}`;
+      const langPair = hasChinese ? 'zh|en' : 'en|zh';
+      const myMemoryUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(cleanText)}&langpair=${encodeURIComponent(langPair)}`;
       const res = await fetchWithRetry(myMemoryUrl, { timeoutMs: 8000, maxRetries: 2 });
       if (res.ok) {
         const json = await res.json();
