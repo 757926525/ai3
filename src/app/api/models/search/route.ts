@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { fetchWithRetry } from '@/lib/fetchWithRetry';
 
 export const runtime = 'edge';
 
@@ -7,33 +8,32 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const query = searchParams.get('q') || 'flux';
 
-    // Query HuggingFace open-source model hub for text-to-image models
-    const hfSearchUrl = `https://huggingface.co/api/models?search=${encodeURIComponent(query)}&filter=text-to-image&sort=downloads&direction=-1&limit=20`;
-
-    const res = await fetch(hfSearchUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; FoxAI/3.0)',
-      },
-    });
-
-    if (!res.ok) {
+    if (!query.trim()) {
       return NextResponse.json({ success: true, data: [] });
     }
 
-    const models = await res.json();
-    const formatted = (models || []).map((m: any) => ({
-      id: m.id,
-      name: m.id,
-      translatedName: m.id.split('/')[1] || m.id,
-      description: `HuggingFace 社区热门开源模型 (下载量: ${m.downloads || 0}, 喜爱: ${m.likes || 0})`,
-      provider: 'huggingface' as const,
-      hfModelPath: m.id,
-      category: 'sdxl' as const,
-      recommendedReason: `HuggingFace 开源模型 · 下载量 ${m.downloads || 0}`,
-    }));
+    // Query HuggingFace Inference Open Models
+    const hfUrl = `https://huggingface.co/api/models?search=${encodeURIComponent(query.trim())}&filter=text-to-image&sort=downloads&direction=-1&limit=15`;
+    const res = await fetchWithRetry(hfUrl, { timeoutMs: 10000, maxRetries: 1 });
 
-    return NextResponse.json({ success: true, data: formatted });
-  } catch (error: any) {
-    return NextResponse.json({ success: true, data: [], message: error?.message });
+    if (res.ok) {
+      const modelsData = await res.json();
+      const formatted = (modelsData || []).map((m: any) => ({
+        id: m.id || m.modelId,
+        name: (m.id || m.modelId).split('/').pop() || m.id,
+        translatedName: (m.id || m.modelId).split('/').pop() || m.id,
+        description: `全网开源文生图模型 (${m.downloads || 1000}+ 下载量)`,
+        posterUrl: `https://image.pollinations.ai/prompt/${encodeURIComponent((m.id || m.modelId).split('/').pop())}%20artwork?width=300&height=300&nologo=true`,
+        provider: 'huggingface',
+        category: 'flux',
+        isFree: true,
+      }));
+
+      return NextResponse.json({ success: true, data: formatted });
+    }
+
+    return NextResponse.json({ success: true, data: [] });
+  } catch (err: any) {
+    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }

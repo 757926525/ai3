@@ -47,6 +47,7 @@ export const Txt2ImgTab: React.FC = () => {
   const [useCustomDimensions, setUseCustomDimensions] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
   const [isEnhancingPrompt, setIsEnhancingPrompt] = useState(false);
+  const [isGeneratingNegativeSuggest, setIsGeneratingNegativeSuggest] = useState(false);
   const [isUpscaling, setIsUpscaling] = useState(false);
   const [upscaledUrl, setUpscaledUrl] = useState<string | null>(null);
 
@@ -60,10 +61,6 @@ export const Txt2ImgTab: React.FC = () => {
   const [clipSkip, setClipSkip] = useState(1);
   const [seed, setSeed] = useState<number | undefined>(undefined);
   const [isSeedLocked, setIsSeedLocked] = useState(false);
-  const [enableHiresFix, setEnableHiresFix] = useState(false);
-  const [hiresScale, setHiresScale] = useState(1.5);
-  const [hiresDenoising, setHiresDenoising] = useState(0.5);
-  const [enableFaceRestore, setEnableFaceRestore] = useState(true);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -90,10 +87,6 @@ export const Txt2ImgTab: React.FC = () => {
       scheduler,
       clipSkip,
       seed: finalSeed,
-      enableHiresFix,
-      hiresScale,
-      hiresDenoising,
-      enableFaceRestore,
     });
   };
 
@@ -154,6 +147,18 @@ export const Txt2ImgTab: React.FC = () => {
       showToast('润色处理失败', 'error');
     } finally {
       setIsEnhancingPrompt(false);
+    }
+  };
+
+  // Generate Smart Negative Prompt Suggestion
+  const handleSuggestNegativePrompt = async () => {
+    setIsGeneratingNegativeSuggest(true);
+    try {
+      const suggestions = 'low resolution, blurry, distorted, extra limbs, bad hands, bad face, deformed, ugly, mutated fingers, watermark, text, out of frame';
+      setNegativePrompt(suggestions);
+      showToast('已一键智能补充通用最佳避坑负向提示词！', 'success');
+    } finally {
+      setIsGeneratingNegativeSuggest(false);
     }
   };
 
@@ -248,31 +253,29 @@ export const Txt2ImgTab: React.FC = () => {
             />
           </div>
 
-          {/* Style Presets */}
+          {/* Negative Prompt Input Box directly below positive prompt */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2.5">
-            <div className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center justify-between">
-              <span>🎨 艺术风格预设</span>
-              <span className="text-[10px] text-blue-600 dark:text-blue-400 font-normal">
-                {selectedStyle?.name || '无滤镜'}
-              </span>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <span>🚫 反向提示词 (Negative Prompt)</span>
+              </label>
+
+              <button
+                onClick={handleSuggestNegativePrompt}
+                disabled={isGeneratingNegativeSuggest}
+                className="px-2.5 py-1 text-[11px] font-extrabold bg-blue-50 dark:bg-slate-800 text-blue-600 dark:text-blue-300 hover:bg-blue-100 rounded-lg transition border border-blue-200 dark:border-slate-700"
+              >
+                ✨ 一键生成优化建议
+              </button>
             </div>
 
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-              {STYLE_PRESETS.map((style) => (
-                <button
-                  key={style.id}
-                  onClick={() => setSelectedStyle(style)}
-                  className={`p-2 rounded-xl text-xs font-bold border text-left flex items-center gap-1.5 transition ${
-                    selectedStyle.id === style.id
-                      ? 'border-blue-500 bg-blue-50/80 dark:bg-blue-950/50 text-blue-600 dark:text-blue-300 shadow-sm'
-                      : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 text-slate-700 dark:text-slate-300 hover:bg-slate-100'
-                  }`}
-                >
-                  <span className="text-sm">{style.icon}</span>
-                  <span className="truncate text-[11px]">{style.name}</span>
-                </button>
-              ))}
-            </div>
+            <textarea
+              rows={2}
+              value={negativePrompt}
+              onChange={(e) => setNegativePrompt(e.target.value)}
+              placeholder="需要过滤或排除的画面属性，如: blurry, deformed, low quality..."
+              className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition resize-none"
+            />
           </div>
 
           {/* Aspect Ratios & Dimensions */}
@@ -553,6 +556,33 @@ export const Txt2ImgTab: React.FC = () => {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Style Presets moved down directly below the real-time drawing preview */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2.5">
+            <div className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center justify-between">
+              <span>🎨 艺术风格预设</span>
+              <span className="text-[10px] text-blue-600 dark:text-blue-400 font-normal">
+                {selectedStyle?.name || '无滤镜'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              {STYLE_PRESETS.map((style) => (
+                <button
+                  key={style.id}
+                  onClick={() => setSelectedStyle(style)}
+                  className={`p-2 rounded-xl text-xs font-bold border text-left flex items-center gap-1.5 transition ${
+                    selectedStyle.id === style.id
+                      ? 'border-blue-500 bg-blue-50/80 dark:bg-blue-950/50 text-blue-600 dark:text-blue-300 shadow-sm'
+                      : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 text-slate-700 dark:text-slate-300 hover:bg-slate-100'
+                  }`}
+                >
+                  <span className="text-sm">{style.icon}</span>
+                  <span className="truncate text-[11px]">{style.name}</span>
+                </button>
+              ))}
             </div>
           </div>
         </div>

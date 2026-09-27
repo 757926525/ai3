@@ -13,6 +13,7 @@ export interface AIModel {
   name: string;
   translatedName?: string;
   description: string;
+  posterUrl?: string;
   provider: 'stable-diffusion' | 'cloudflare' | 'huggingface' | 'fal-ai' | 'openai' | 'pollinations' | 'custom';
   cfModelPath?: string;
   hfModelPath?: string;

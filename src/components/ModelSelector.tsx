@@ -20,7 +20,7 @@ export const ModelSelector: React.FC<CompactModelBarProps> = ({ onOpenFullModal 
 
   const handleSelect = (model: AIModel) => {
     setSelectedModel(model);
-    showToast(`已选用: ${model.translatedName || model.name}`, 'success');
+    showToast(`已选用并应用模型: ${model.translatedName || model.name}`, 'success');
     setShowDrawer(false);
   };
 
@@ -39,7 +39,7 @@ export const ModelSelector: React.FC<CompactModelBarProps> = ({ onOpenFullModal 
         if (modelResults.length === 0) {
           showToast('全网搜索未匹配到相关开放模型', 'info');
         } else {
-          showToast(`已匹配 ${modelResults.length} 款开放模型`, 'success');
+          showToast(`全网检索到 ${modelResults.length} 款模型，均包含海报缩略图`, 'success');
         }
       } else {
         showToast('全网模型检索网络异常', 'error');
@@ -61,7 +61,7 @@ export const ModelSelector: React.FC<CompactModelBarProps> = ({ onOpenFullModal 
           <span>🎯 {selectedModel.translatedName || selectedModel.name}</span>
           {selectedModel.supportsChinesePrompt && (
             <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500 text-white font-bold">
-              支持中文生图
+              中文生图
             </span>
           )}
           <span className="text-[10px] opacity-80">▼</span>
@@ -93,9 +93,9 @@ export const ModelSelector: React.FC<CompactModelBarProps> = ({ onOpenFullModal 
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
               <div>
                 <span className="font-black text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                  <span>🤖 AI 绘图预置大模型全库</span>
+                  <span>🤖 AI 绘图 30+ 预置与全网开源模型库</span>
                 </span>
-                <span className="text-[11px] text-slate-400">已标出「支持中文生图」、「免费免 Key」与「需配置 Key」模型</span>
+                <span className="text-[11px] text-slate-400">热门模型带海报展示，支持全网开源模型一键保存应用</span>
               </div>
               <button
                 onClick={() => setShowDrawer(false)}
@@ -129,24 +129,29 @@ export const ModelSelector: React.FC<CompactModelBarProps> = ({ onOpenFullModal 
                     disabled={isSearchingInternet}
                     className="px-3.5 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-bold whitespace-nowrap"
                   >
-                    {isSearchingInternet ? '检索中...' : '搜索'}
+                    {isSearchingInternet ? '检索中...' : '全网搜索'}
                   </button>
                 </div>
 
                 {internetFreeModels.length > 0 && (
-                  <div className="space-y-1.5 max-h-36 overflow-y-auto pt-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pt-1">
                     {internetFreeModels.map((freeM) => (
                       <div
                         key={freeM.id}
                         onClick={() => handleSelect(freeM)}
                         className="p-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs cursor-pointer hover:border-blue-500"
                       >
-                        <div className="truncate mr-2">
-                          <div className="font-bold truncate">{freeM.name}</div>
-                          <div className="text-[10px] text-slate-400 truncate">{freeM.id}</div>
+                        <div className="flex items-center gap-2 truncate mr-2">
+                          {freeM.posterUrl && (
+                            <img src={freeM.posterUrl} alt="Poster" className="w-9 h-9 rounded-lg object-cover shrink-0" />
+                          )}
+                          <div className="truncate">
+                            <div className="font-bold truncate">{freeM.name}</div>
+                            <div className="text-[10px] text-slate-400 truncate">{freeM.id}</div>
+                          </div>
                         </div>
                         <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-bold text-[10px] rounded shrink-0">
-                          免费一键应用
+                          套用模型
                         </span>
                       </div>
                     ))}
@@ -155,36 +160,54 @@ export const ModelSelector: React.FC<CompactModelBarProps> = ({ onOpenFullModal 
               </div>
             )}
 
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+            <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
               {models.map((m) => (
                 <div
                   key={m.id}
                   onClick={() => handleSelect(m)}
-                  className={`p-3.5 rounded-2xl border transition flex items-center justify-between cursor-pointer ${
+                  className={`p-3 bg-slate-50 dark:bg-slate-950 rounded-2xl border transition flex items-center justify-between gap-3 cursor-pointer ${
                     selectedModel.id === m.id
-                      ? 'border-blue-500 bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300 font-extrabold'
-                      : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900 text-slate-800 dark:text-slate-200'
+                      ? 'border-blue-500 bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300 font-extrabold ring-1 ring-blue-500'
+                      : 'border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 hover:border-slate-300'
                   }`}
                 >
-                  <div>
-                    <div className="text-xs font-bold flex items-center gap-2">
-                      <span>{m.translatedName || m.name}</span>
-                      {m.supportsChinesePrompt && (
-                        <span className="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-300 text-[10px] font-bold">
-                          支持中文生图
-                        </span>
-                      )}
-                      {m.isFree && (
-                        <span className="px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-300 text-[10px] font-bold">
-                          免费免 Key
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">
-                      {m.description}
+                  <div className="flex items-center gap-3 truncate">
+                    {m.posterUrl && (
+                      <img
+                        src={m.posterUrl}
+                        alt="Model Poster"
+                        className="w-12 h-12 rounded-xl object-cover shrink-0 border border-slate-200 dark:border-slate-800 shadow-sm"
+                      />
+                    )}
+                    <div className="truncate">
+                      <div className="text-xs font-bold flex items-center gap-1.5 truncate">
+                        <span className="truncate">{m.translatedName || m.name}</span>
+                        {m.supportsChinesePrompt && (
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-300 text-[9px] font-bold shrink-0">
+                            支持中文生图
+                          </span>
+                        )}
+                        {m.isFree ? (
+                          <span className="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-300 text-[9px] font-bold shrink-0">
+                            免费免 Key
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-300 text-[9px] font-bold shrink-0">
+                            需配 Key
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">
+                        {m.description}
+                      </div>
                     </div>
                   </div>
-                  {selectedModel.id === m.id && <span className="text-sm">✓</span>}
+
+                  {selectedModel.id === m.id && (
+                    <span className="px-2.5 py-1 bg-blue-600 text-white text-[10px] font-bold rounded-lg shrink-0">
+                      ✓ 使用中
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
