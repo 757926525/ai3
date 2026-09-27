@@ -39,7 +39,7 @@ export const ModelSelector: React.FC<CompactModelBarProps> = ({ onOpenFullModal 
         if (modelResults.length === 0) {
           showToast('全网搜索未匹配到相关开放模型', 'info');
         } else {
-          showToast(`全网检索到 ${modelResults.length} 款模型，均包含海报缩略图`, 'success');
+          showToast(`全网检索到 ${modelResults.length} 款模型，均包含海报缩略图，支持一键加入`, 'success');
         }
       } else {
         showToast('全网模型检索网络异常', 'error');
@@ -49,6 +49,11 @@ export const ModelSelector: React.FC<CompactModelBarProps> = ({ onOpenFullModal 
     } finally {
       setIsSearchingInternet(false);
     }
+  };
+
+  const handleAddAndApplyModel = (model: AIModel) => {
+    handleSelect(model);
+    showToast(`已成功加入模型库并应用: ${model.translatedName || model.name}`, 'success');
   };
 
   return (
@@ -138,21 +143,24 @@ export const ModelSelector: React.FC<CompactModelBarProps> = ({ onOpenFullModal 
                     {internetFreeModels.map((freeM) => (
                       <div
                         key={freeM.id}
-                        onClick={() => handleSelect(freeM)}
-                        className="p-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs cursor-pointer hover:border-blue-500"
+                        className="p-2.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs hover:border-blue-500 transition"
                       >
                         <div className="flex items-center gap-2 truncate mr-2">
                           {freeM.posterUrl && (
-                            <img src={freeM.posterUrl} alt="Poster" className="w-9 h-9 rounded-lg object-cover shrink-0" />
+                            <img src={freeM.posterUrl} alt="Poster" className="w-10 h-10 rounded-lg object-cover shrink-0" />
                           )}
                           <div className="truncate">
-                            <div className="font-bold truncate">{freeM.name}</div>
+                            <div className="font-bold truncate text-slate-800 dark:text-slate-200">{freeM.translatedName || freeM.name}</div>
                             <div className="text-[10px] text-slate-400 truncate">{freeM.id}</div>
                           </div>
                         </div>
-                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-bold text-[10px] rounded shrink-0">
-                          套用模型
-                        </span>
+
+                        <button
+                          onClick={() => handleAddAndApplyModel(freeM)}
+                          className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] rounded-lg shrink-0 shadow-sm transition flex items-center gap-1"
+                        >
+                          <span>➕ 1-键加入</span>
+                        </button>
                       </div>
                     ))}
                   </div>

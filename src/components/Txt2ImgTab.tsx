@@ -199,393 +199,388 @@ export const Txt2ImgTab: React.FC = () => {
         <ModelSelector />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Left Column Controls */}
-        <div className="lg:col-span-7 space-y-4">
-          {/* Positive Prompt Input Box */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                <span>正向提示词 (Prompt)</span>
-                <span className="text-[10px] font-normal text-slate-400">
-                  {currentPrompt.length} 字
-                </span>
-              </label>
+      <div className="space-y-4">
+        {/* 1. Positive Prompt Input Box */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+              <span>正向提示词 (Prompt)</span>
+              <span className="text-[10px] font-normal text-slate-400">
+                {currentPrompt.length} 字
+              </span>
+            </label>
 
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => saveCurrentAsDraft()}
-                  className="px-2 py-1 text-[11px] font-bold bg-blue-50 dark:bg-slate-800 text-blue-600 dark:text-blue-300 rounded-lg hover:bg-blue-100 transition"
-                  title="存草稿"
-                >
-                  💾 存草稿
-                </button>
-                <button
-                  onClick={() => setShowDraftsDrawer(true)}
-                  className="px-2 py-1 text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 transition"
-                  title="草稿箱"
-                >
-                  📁 草稿箱 ({drafts.length})
-                </button>
-                <button
-                  onClick={handleTranslatePrompt}
-                  disabled={isTranslating}
-                  className="px-2 py-1 text-[11px] font-bold bg-blue-50 dark:bg-slate-800 text-blue-600 dark:text-blue-300 hover:bg-blue-100 rounded-lg transition"
-                >
-                  {isTranslating ? '⏳' : '🌐 中英互译'}
-                </button>
-                <button
-                  onClick={handleEnhanceWithLLM}
-                  disabled={isEnhancingPrompt}
-                  className="px-2 py-1 text-[11px] font-bold bg-blue-600 text-white hover:bg-blue-700 rounded-lg shadow-sm transition"
-                >
-                  {isEnhancingPrompt ? '✨' : '✨ 5维扩写'}
-                </button>
-              </div>
-            </div>
-
-            <textarea
-              rows={3}
-              value={currentPrompt}
-              onChange={(e) => setCurrentPrompt(e.target.value)}
-              placeholder="描述你想生成的画面细节... (按 Cmd/Ctrl + Enter 快捷生图)"
-              className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition resize-none"
-            />
-          </div>
-
-          {/* Negative Prompt Input Box directly below positive prompt */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2.5">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                <span>🚫 反向提示词 (Negative Prompt)</span>
-              </label>
-
+            <div className="flex items-center gap-1.5">
               <button
-                onClick={handleSuggestNegativePrompt}
-                disabled={isGeneratingNegativeSuggest}
-                className="px-2.5 py-1 text-[11px] font-extrabold bg-blue-50 dark:bg-slate-800 text-blue-600 dark:text-blue-300 hover:bg-blue-100 rounded-lg transition border border-blue-200 dark:border-slate-700"
+                onClick={() => saveCurrentAsDraft()}
+                className="px-2 py-1 text-[11px] font-bold bg-blue-50 dark:bg-slate-800 text-blue-600 dark:text-blue-300 rounded-lg hover:bg-blue-100 transition"
+                title="存草稿"
               >
-                ✨ 一键生成优化建议
+                💾 存草稿
+              </button>
+              <button
+                onClick={() => setShowDraftsDrawer(true)}
+                className="px-2 py-1 text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 transition"
+                title="草稿箱"
+              >
+                📁 草稿箱 ({drafts.length})
+              </button>
+              <button
+                onClick={handleTranslatePrompt}
+                disabled={isTranslating}
+                className="px-2 py-1 text-[11px] font-bold bg-blue-50 dark:bg-slate-800 text-blue-600 dark:text-blue-300 hover:bg-blue-100 rounded-lg transition"
+              >
+                {isTranslating ? '⏳' : '🌐 中英互译'}
+              </button>
+              <button
+                onClick={handleEnhanceWithLLM}
+                disabled={isEnhancingPrompt}
+                className="px-2 py-1 text-[11px] font-bold bg-blue-600 text-white hover:bg-blue-700 rounded-lg shadow-sm transition"
+              >
+                {isEnhancingPrompt ? '✨' : '✨ 5维扩写'}
               </button>
             </div>
-
-            <textarea
-              rows={2}
-              value={negativePrompt}
-              onChange={(e) => setNegativePrompt(e.target.value)}
-              placeholder="需要过滤或排除的画面属性，如: blurry, deformed, low quality..."
-              className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition resize-none"
-            />
           </div>
 
-          {/* Aspect Ratios & Dimensions */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-black text-slate-800 dark:text-slate-200">
-                📐 图像尺寸与画幅调节
-              </span>
-              <button
-                onClick={() => setUseCustomDimensions(!useCustomDimensions)}
-                className="text-[11px] px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg font-bold"
-              >
-                {useCustomDimensions ? '切换预设比例' : '⚙️ 自定义像素 (W×H)'}
-              </button>
-            </div>
-
-            {useCustomDimensions ? (
-              <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl space-y-3 border border-slate-200 dark:border-slate-800">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <div className="flex justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      <span>宽度 (Width):</span>
-                      <span className="text-blue-600">{customWidth} px</span>
-                    </div>
-                    <input
-                      type="range"
-                      min={512}
-                      max={1536}
-                      step={64}
-                      value={customWidth}
-                      onChange={(e) => setCustomWidth(Number(e.target.value))}
-                      className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      <span>高度 (Height):</span>
-                      <span className="text-blue-600">{customHeight} px</span>
-                    </div>
-                    <input
-                      type="range"
-                      min={512}
-                      max={1536}
-                      step={64}
-                      value={customHeight}
-                      onChange={(e) => setCustomHeight(Number(e.target.value))}
-                      className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                    />
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                {QUICK_ASPECT_RATIOS.map((ratio) => (
-                  <button
-                    key={ratio.value}
-                    onClick={() => {
-                      setAspectRatio(ratio.value);
-                      setCustomWidth(ratio.w);
-                      setCustomHeight(ratio.h);
-                    }}
-                    className={`p-2 rounded-xl text-xs font-bold border text-center transition flex flex-col items-center justify-center gap-1 ${
-                      aspectRatio === ratio.value && !useCustomDimensions
-                        ? 'border-blue-500 bg-blue-50/80 dark:bg-blue-950/50 text-blue-600 dark:text-blue-300 shadow-sm'
-                        : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 text-slate-600 dark:text-slate-300'
-                    }`}
-                  >
-                    <span className="text-sm">{ratio.icon}</span>
-                    <span className="text-[11px]">{ratio.label}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Generator Tuning Accordion */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
-            <button
-              onClick={() => setShowAdvancedTuning(!showAdvancedTuning)}
-              className="w-full flex items-center justify-between text-xs font-black text-slate-800 dark:text-slate-200"
-            >
-              <span className="flex items-center gap-2">
-                <span>🎛️ 高级生成器调优面板 (应有尽有)</span>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-                  极客模组
-                </span>
-              </span>
-              <span>{showAdvancedTuning ? '▲ 折叠' : '▼ 展开调优'}</span>
-            </button>
-
-            {showAdvancedTuning && (
-              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-4 animate-fade-in text-xs">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      采样算法 (Sampler)
-                    </label>
-                    <select
-                      value={sampler}
-                      onChange={(e) => setSampler(e.target.value)}
-                      className="w-full p-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-bold"
-                    >
-                      {SAMPLING_METHODS.map((m) => (
-                        <option key={m} value={m}>
-                          {m}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      调度算法 (Scheduler)
-                    </label>
-                    <select
-                      value={scheduler}
-                      onChange={(e) => setScheduler(e.target.value)}
-                      className="w-full p-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-bold"
-                    >
-                      {SCHEDULER_TYPES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <div className="flex justify-between font-bold mb-1">
-                      <span>采样步数:</span>
-                      <span className="text-blue-600">{steps} 步</span>
-                    </div>
-                    <input
-                      type="range"
-                      min={10}
-                      max={50}
-                      value={steps}
-                      onChange={(e) => setSteps(Number(e.target.value))}
-                      className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between font-bold mb-1">
-                      <span>引导系数 CFG:</span>
-                      <span className="text-blue-600">{guidance}</span>
-                    </div>
-                    <input
-                      type="range"
-                      min={1}
-                      max={20}
-                      step={0.5}
-                      value={guidance}
-                      onChange={(e) => setGuidance(Number(e.target.value))}
-                      className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between font-bold mb-1">
-                      <span>CLIP Skip:</span>
-                      <span className="text-blue-600">{clipSkip}</span>
-                    </div>
-                    <input
-                      type="range"
-                      min={1}
-                      max={4}
-                      value={clipSkip}
-                      onChange={(e) => setClipSkip(Number(e.target.value))}
-                      className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
-                  <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <span className="font-bold whitespace-nowrap">🎲 随机种子 (Seed):</span>
-                    <input
-                      type="number"
-                      placeholder="随机生成"
-                      value={seed || ''}
-                      onChange={(e) => setSeed(e.target.value ? Number(e.target.value) : undefined)}
-                      className="px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg font-mono text-xs w-32"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                    <button
-                      onClick={() => setSeed(Math.floor(Math.random() * 899999) + 100000)}
-                      className="px-2.5 py-1 bg-slate-200 dark:bg-slate-800 rounded-lg font-bold hover:bg-slate-300"
-                    >
-                      🎲 换 Seed
-                    </button>
-                    <label className="flex items-center gap-1 font-bold cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={isSeedLocked}
-                        onChange={(e) => setIsSeedLocked(e.target.checked)}
-                        className="rounded text-blue-600"
-                      />
-                      <span>锁定 Seed</span>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Trigger Generate Button */}
-          <button
-            onClick={handleGenerate}
-            disabled={isGenerating || !currentPrompt.trim()}
-            className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-base rounded-2xl shadow-xl shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition transform active:scale-[0.99] flex items-center justify-center gap-2"
-          >
-            {isGenerating ? (
-              <span>⏳ AI 正在全速推演生成中...</span>
-            ) : (
-              <span>🚀 立即生成画面 (Cmd/Ctrl + Enter)</span>
-            )}
-          </button>
+          <textarea
+            rows={3}
+            value={currentPrompt}
+            onChange={(e) => setCurrentPrompt(e.target.value)}
+            placeholder="描述你想生成的画面细节... (按 Cmd/Ctrl + Enter 快捷生图)"
+            className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition resize-none"
+          />
         </div>
 
-        {/* Right Output Display */}
-        <div className="lg:col-span-5 space-y-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm min-h-[380px] flex flex-col justify-between">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <span className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                <span>🖼️ 实时绘图工作台预览</span>
-              </span>
-              {activeDisplayImage && (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleUpscaleImage(activeDisplayImage)}
-                    disabled={isUpscaling}
-                    className="px-2.5 py-1 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900 rounded-lg text-xs font-bold hover:bg-amber-100 transition"
-                  >
-                    {isUpscaling ? '⚡ 超分中...' : '🔍 画质超分 2X'}
-                  </button>
-                  <a
-                    href={activeDisplayImage}
-                    download={`foxai3_${Date.now()}.png`}
-                    className="px-2.5 py-1 bg-blue-50 dark:bg-slate-800 text-blue-600 dark:text-blue-300 rounded-lg text-xs font-bold hover:bg-blue-100 transition"
-                  >
-                    💾 下载
-                  </a>
-                </div>
-              )}
-            </div>
+        {/* 2. Negative Prompt Input Box directly below positive prompt */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2.5">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+              <span>🚫 反向提示词 (Negative Prompt)</span>
+            </label>
 
-            <div className="my-auto py-4 flex flex-col items-center justify-center">
-              {isGenerating ? (
-                <div className="space-y-4 text-center py-12">
-                  <div className="w-14 h-14 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
-                  <p className="text-xs text-slate-500 animate-pulse">
-                    正在由融合算力引擎并行推演...
-                  </p>
-                </div>
-              ) : activeDisplayImage ? (
-                <div className="space-y-3 w-full">
-                  <div className="relative group rounded-xl overflow-hidden bg-slate-950 shadow-lg border border-slate-200 dark:border-slate-800">
-                    <img
-                      src={activeDisplayImage}
-                      alt="Generated AI result"
-                      className="w-full h-auto object-contain max-h-[480px] mx-auto"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-16 space-y-3">
-                  <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-slate-800 text-blue-500 flex items-center justify-center text-2xl mx-auto">
-                    🎨
-                  </div>
-                  <div className="text-xs font-black text-slate-700 dark:text-slate-300">
-                    画布等待生成
-                  </div>
-                </div>
-              )}
-            </div>
+            <button
+              onClick={handleSuggestNegativePrompt}
+              disabled={isGeneratingNegativeSuggest}
+              className="px-2.5 py-1 text-[11px] font-extrabold bg-blue-50 dark:bg-slate-800 text-blue-600 dark:text-blue-300 hover:bg-blue-100 rounded-lg transition border border-blue-200 dark:border-slate-700"
+            >
+              ✨ 一键生成优化建议
+            </button>
           </div>
 
-          {/* Style Presets moved down directly below the real-time drawing preview */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2.5">
-            <div className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center justify-between">
-              <span>🎨 艺术风格预设</span>
-              <span className="text-[10px] text-blue-600 dark:text-blue-400 font-normal">
-                {selectedStyle?.name || '无滤镜'}
-              </span>
-            </div>
+          <textarea
+            rows={2}
+            value={negativePrompt}
+            onChange={(e) => setNegativePrompt(e.target.value)}
+            placeholder="需要过滤或排除的画面属性，如: blurry, deformed, low quality..."
+            className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition resize-none"
+          />
+        </div>
 
-            <div className="grid grid-cols-3 gap-2">
-              {STYLE_PRESETS.map((style) => (
+        {/* 3. Real-time Workstation Preview Output Display directly below prompt input area */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm min-h-[380px] flex flex-col justify-between">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <span className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-2">
+              <span>🖼️ 实时绘图工作台预览区 (直接位于提示词下方)</span>
+            </span>
+            {activeDisplayImage && (
+              <div className="flex items-center gap-2">
                 <button
-                  key={style.id}
-                  onClick={() => setSelectedStyle(style)}
-                  className={`p-2 rounded-xl text-xs font-bold border text-left flex items-center gap-1.5 transition ${
-                    selectedStyle.id === style.id
+                  onClick={() => handleUpscaleImage(activeDisplayImage)}
+                  disabled={isUpscaling}
+                  className="px-2.5 py-1 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900 rounded-lg text-xs font-bold hover:bg-amber-100 transition"
+                >
+                  {isUpscaling ? '⚡ 超分中...' : '🔍 画质超分 2X'}
+                </button>
+                <a
+                  href={activeDisplayImage}
+                  download={`foxai3_${Date.now()}.png`}
+                  className="px-2.5 py-1 bg-blue-50 dark:bg-slate-800 text-blue-600 dark:text-blue-300 rounded-lg text-xs font-bold hover:bg-blue-100 transition"
+                >
+                  💾 下载
+                </a>
+              </div>
+            )}
+          </div>
+
+          <div className="my-auto py-4 flex flex-col items-center justify-center">
+            {isGenerating ? (
+              <div className="space-y-4 text-center py-12">
+                <div className="w-14 h-14 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
+                <p className="text-xs text-slate-500 animate-pulse">
+                  正在由融合算力引擎并行推演...
+                </p>
+              </div>
+            ) : activeDisplayImage ? (
+              <div className="space-y-3 w-full">
+                <div className="relative group rounded-xl overflow-hidden bg-slate-950 shadow-lg border border-slate-200 dark:border-slate-800">
+                  <img
+                    src={activeDisplayImage}
+                    alt="Generated AI result"
+                    className="w-full h-auto object-contain max-h-[520px] mx-auto"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-16 space-y-3">
+                <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-slate-800 text-blue-500 flex items-center justify-center text-2xl mx-auto">
+                  🎨
+                </div>
+                <div className="text-xs font-black text-slate-700 dark:text-slate-300">
+                  工作台等待生成画作
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 4. Aspect Ratios & Dimensions */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black text-slate-800 dark:text-slate-200">
+              📐 图像尺寸与画幅调节
+            </span>
+            <button
+              onClick={() => setUseCustomDimensions(!useCustomDimensions)}
+              className="text-[11px] px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg font-bold"
+            >
+              {useCustomDimensions ? '切换预设比例' : '⚙️ 自定义像素 (W×H)'}
+            </button>
+          </div>
+
+          {useCustomDimensions ? (
+            <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl space-y-3 border border-slate-200 dark:border-slate-800">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="flex justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    <span>宽度 (Width):</span>
+                    <span className="text-blue-600">{customWidth} px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={512}
+                    max={1536}
+                    step={64}
+                    value={customWidth}
+                    onChange={(e) => setCustomWidth(Number(e.target.value))}
+                    className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    <span>高度 (Height):</span>
+                    <span className="text-blue-600">{customHeight} px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={512}
+                    max={1536}
+                    step={64}
+                    value={customHeight}
+                    onChange={(e) => setCustomHeight(Number(e.target.value))}
+                    className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              {QUICK_ASPECT_RATIOS.map((ratio) => (
+                <button
+                  key={ratio.value}
+                  onClick={() => {
+                    setAspectRatio(ratio.value);
+                    setCustomWidth(ratio.w);
+                    setCustomHeight(ratio.h);
+                  }}
+                  className={`p-2 rounded-xl text-xs font-bold border text-center transition flex flex-col items-center justify-center gap-1 ${
+                    aspectRatio === ratio.value && !useCustomDimensions
                       ? 'border-blue-500 bg-blue-50/80 dark:bg-blue-950/50 text-blue-600 dark:text-blue-300 shadow-sm'
-                      : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 text-slate-700 dark:text-slate-300 hover:bg-slate-100'
+                      : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 text-slate-600 dark:text-slate-300'
                   }`}
                 >
-                  <span className="text-sm">{style.icon}</span>
-                  <span className="truncate text-[11px]">{style.name}</span>
+                  <span className="text-sm">{ratio.icon}</span>
+                  <span className="text-[11px]">{ratio.label}</span>
                 </button>
               ))}
             </div>
+          )}
+        </div>
+
+        {/* 5. Style Presets */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2.5">
+          <div className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center justify-between">
+            <span>🎨 艺术风格预设</span>
+            <span className="text-[10px] text-blue-600 dark:text-blue-400 font-normal">
+              {selectedStyle?.name || '无滤镜'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+            {STYLE_PRESETS.map((style) => (
+              <button
+                key={style.id}
+                onClick={() => setSelectedStyle(style)}
+                className={`p-2 rounded-xl text-xs font-bold border text-left flex items-center gap-1.5 transition ${
+                  selectedStyle.id === style.id
+                    ? 'border-blue-500 bg-blue-50/80 dark:bg-blue-950/50 text-blue-600 dark:text-blue-300 shadow-sm'
+                    : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 text-slate-700 dark:text-slate-300 hover:bg-slate-100'
+                }`}
+              >
+                <span className="text-sm">{style.icon}</span>
+                <span className="truncate text-[11px]">{style.name}</span>
+              </button>
+            ))}
           </div>
         </div>
+
+        {/* 6. Generator Tuning Accordion */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+          <button
+            onClick={() => setShowAdvancedTuning(!showAdvancedTuning)}
+            className="w-full flex items-center justify-between text-xs font-black text-slate-800 dark:text-slate-200"
+          >
+            <span className="flex items-center gap-2">
+              <span>🎛️ 高级生成器调优面板 (应有尽有)</span>
+              <span className="text-[10px] px-2 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                极客模组
+              </span>
+            </span>
+            <span>{showAdvancedTuning ? '▲ 折叠' : '▼ 展开调优'}</span>
+          </button>
+
+          {showAdvancedTuning && (
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-4 animate-fade-in text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    采样算法 (Sampler)
+                  </label>
+                  <select
+                    value={sampler}
+                    onChange={(e) => setSampler(e.target.value)}
+                    className="w-full p-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-bold"
+                  >
+                    {SAMPLING_METHODS.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    调度算法 (Scheduler)
+                  </label>
+                  <select
+                    value={scheduler}
+                    onChange={(e) => setScheduler(e.target.value)}
+                    className="w-full p-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-bold"
+                  >
+                    {SCHEDULER_TYPES.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <div className="flex justify-between font-bold mb-1">
+                    <span>采样步数:</span>
+                    <span className="text-blue-600">{steps} 步</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={10}
+                    max={50}
+                    value={steps}
+                    onChange={(e) => setSteps(Number(e.target.value))}
+                    className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between font-bold mb-1">
+                    <span>引导系数 CFG:</span>
+                    <span className="text-blue-600">{guidance}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={1}
+                    max={20}
+                    step={0.5}
+                    value={guidance}
+                    onChange={(e) => setGuidance(Number(e.target.value))}
+                    className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between font-bold mb-1">
+                    <span>CLIP Skip:</span>
+                    <span className="text-blue-600">{clipSkip}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={1}
+                    max={4}
+                    value={clipSkip}
+                    onChange={(e) => setClipSkip(Number(e.target.value))}
+                    className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <span className="font-bold whitespace-nowrap">🎲 随机种子 (Seed):</span>
+                  <input
+                    type="number"
+                    placeholder="随机生成"
+                    value={seed || ''}
+                    onChange={(e) => setSeed(e.target.value ? Number(e.target.value) : undefined)}
+                    className="px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg font-mono text-xs w-32"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                  <button
+                    onClick={() => setSeed(Math.floor(Math.random() * 899999) + 100000)}
+                    className="px-2.5 py-1 bg-slate-200 dark:bg-slate-800 rounded-lg font-bold hover:bg-slate-300"
+                  >
+                    🎲 换 Seed
+                  </button>
+                  <label className="flex items-center gap-1 font-bold cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isSeedLocked}
+                      onChange={(e) => setIsSeedLocked(e.target.checked)}
+                      className="rounded text-blue-600"
+                    />
+                    <span>锁定 Seed</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 7. Trigger Generate Button */}
+        <button
+          onClick={handleGenerate}
+          disabled={isGenerating || !currentPrompt.trim()}
+          className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-base rounded-2xl shadow-xl shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition transform active:scale-[0.99] flex items-center justify-center gap-2"
+        >
+          {isGenerating ? (
+            <span>⏳ AI 正在全速推演生成中...</span>
+          ) : (
+            <span>🚀 立即生成画面 (Cmd/Ctrl + Enter)</span>
+          )}
+        </button>
       </div>
 
       {/* Slide-Up Drafts Drawer */}

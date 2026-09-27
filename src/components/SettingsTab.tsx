@@ -404,13 +404,13 @@ export const SettingsTab: React.FC = () => {
       <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
         <div>
           <div className="text-xs font-black text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
-            <span>🔥 自由艺术生成模式 (解禁敏感艺术限制)</span>
-            <span className="text-[10px] px-2 py-0.5 rounded bg-amber-100 text-amber-700 font-bold">
-              {enableNsfw ? '已开启 (无滤镜)' : '已关闭 (严格过滤)'}
+            <span>🔞 成人内容生成开关</span>
+            <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${enableNsfw ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'}`}>
+              {enableNsfw ? '已开启 (无滤镜)' : '已关闭 (常规过滤)'}
             </span>
           </div>
           <div className="text-[11px] text-slate-400 mt-0.5">
-            开启后允许生成全品类自由艺术画面，不再自动叠加安全负向词限制
+            开启后允许生成全品类自由艺术与成人内容，不再自动叠加安全拦截词
           </div>
         </div>
 
@@ -421,7 +421,7 @@ export const SettingsTab: React.FC = () => {
             onChange={(e) => {
               setEnableNsfw(e.target.checked);
               updateSettings({ enableNsfw: e.target.checked });
-              showToast(e.target.checked ? '自由艺术模式已开启！' : '安全过滤模式已开启', 'info');
+              showToast(e.target.checked ? '🔞 成人内容生成模式已开启！' : '🛡️ 常规过滤模式已开启', 'info');
             }}
             className="sr-only peer"
           />
