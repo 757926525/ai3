@@ -88,6 +88,7 @@ export interface UserSettings {
   siliconApiKey?: string;
   openaiApiKey?: string;
   stabilityApiKey?: string;
+  customChatApiKey?: string;
   hfApiKey?: string;
   falApiKey?: string;
   customEndpoint?: string;

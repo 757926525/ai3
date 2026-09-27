@@ -1,17 +1,17 @@
-// Clean, Ultra-High Fidelity Prompt Preprocessor for Free & Cloud Engines
-const QUALITY_TRANSLATION_DICT: Record<string, string> = {
-  白狐: 'a majestic white fox with glowing blue eyes and ethereal fur',
-  白狐AI: 'white fox, glowing mystical blue eyes',
-  赛博朋克: 'cyberpunk style, vibrant neon glowing lights, futuristic cityscape background',
-  机甲: 'highly detailed mecha armor, polished metallic surfaces, intricate mechanical parts',
-  二次元: 'masterpiece anime key visual, Makoto Shinkai aesthetic, crisp clean line art',
-  动漫: 'beautiful anime illustration, vivid rich colors, cinematic composition',
-  水墨: 'traditional Chinese ink wash painting, xuan paper texture, elegant poetic brushstrokes',
-  国风: 'traditional Chinese style, oriental aesthetic, exquisite hanfu',
+// Multi-Language Prompt Fidelity Preprocessor
+const DICT_PROMPT_FIXES: Record<string, string> = {
+  白狐: 'a majestic white fox with glowing blue eyes and fluffy ethereal fur',
+  白狐AI: 'mystical white fox, glowing eyes, masterpiece artwork',
+  赛博朋克: 'cyberpunk style, neon lights, futuristic city background, highly detailed',
+  机甲: 'detailed mecha armor, metallic reflections, intricate machinery',
+  二次元: 'masterpiece anime key visual, Makoto Shinkai style, vibrant vivid colors',
+  动漫: 'beautiful anime illustration, crisp line art, cinematic composition',
+  水墨: 'traditional Chinese ink wash painting, xuan paper texture, elegant brushstrokes',
+  国风: 'traditional Chinese style, oriental aesthetic, exquisite ancient hanfu',
   写实: 'photorealistic portrait, raw photo, DSLR shot, 85mm lens, f/1.8 aperture, natural skin texture',
-  胶片: '35mm vintage film photograph, Kodak Portra 400, fine grain, nostalgic lighting',
+  胶片: '35mm vintage film photograph, Kodak Portra 400, fine grain',
   光影: 'cinematic studio lighting, volumetric shadows, ray tracing reflections',
-  肖像: 'masterpiece detailed portrait, crystal clear focus on eyes',
+  肖像: 'masterpiece portrait, sharp focus on eyes, 8k resolution',
   古风: 'ancient oriental hanfu, elegant flowing silk fabric',
   高清: '8k resolution, hyperdetailed, sharp focus',
 };
@@ -20,20 +20,18 @@ export function parseAndWeightPrompt(prompt: string, styleStrength = 0.65): stri
   let clean = prompt.trim();
   if (!clean) return '';
 
-  // 1. Direct translation of common Chinese prompt terms to descriptive English
-  Object.keys(QUALITY_TRANSLATION_DICT).forEach((key) => {
+  // Direct keyword replacements for Chinese terms
+  Object.keys(DICT_PROMPT_FIXES).forEach((key) => {
     if (clean.includes(key)) {
-      clean = clean.replaceAll(key, QUALITY_TRANSLATION_DICT[key]);
+      clean = clean.replaceAll(key, DICT_PROMPT_FIXES[key]);
     }
   });
 
-  // Remove potential double parentheses or syntax corruptions that degrade FLUX/SDXL free engine rendering
+  // Sanitize broken syntax
   clean = clean.replace(/[\(\)\[\]]/g, '').trim();
 
-  // 2. High-Fidelity Quality Boosters
-  const qualityTriggers = 'masterpiece, best quality, highly detailed, 8k resolution, cinematic lighting, sharp focus, Octane render';
-
-  return `${clean}, ${qualityTriggers}`;
+  const qualityBoost = 'masterpiece, best quality, highly detailed, 8k resolution, cinematic lighting, sharp focus';
+  return `${clean}, ${qualityBoost}`;
 }
 
 export function mergeNegativePrompts(userNegative?: string, defaultNegative?: string, nsfwEnabled = false): string {

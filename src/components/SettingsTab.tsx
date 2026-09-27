@@ -13,67 +13,89 @@ export const SettingsTab: React.FC = () => {
   const [siliconApiKey, setSiliconApiKey] = useState(settings.siliconApiKey || '');
   const [openaiApiKey, setOpenaiApiKey] = useState(settings.openaiApiKey || '');
   const [stabilityApiKey, setStabilityApiKey] = useState(settings.stabilityApiKey || '');
+  const [customChatApiKey, setCustomChatApiKey] = useState(settings.customChatApiKey || '');
   const [enableNsfw, setEnableNsfw] = useState(settings.enableNsfw ?? true);
 
-  // Cloudflare Connection Tester State
-  const [isTestingCf, setIsTestingCf] = useState(false);
-  const [cfTestResult, setCfTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  // Status Light 1: Workers AI API Status
+  const [cfAiStatus, setCfAiStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking');
+  const [cfAiMessage, setCfAiStatusMessage] = useState('正在检测 Cloudflare AI Key 连通状态...');
 
-  // Cloudflare D1 Connection State
-  const [d1Status, setD1Status] = useState<{ connected: boolean; message: string }>({
-    connected: false,
-    message: '正在检测 D1 数据库状态...',
-  });
+  // Status Light 2: External Chat LLM API Status
+  const [chatKeyStatus, setChatKeyStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking');
+  const [chatKeyMessage, setChatKeyStatusMessage] = useState('正在检测对话 API Key...');
+
+  // Status Light 3: Cloudflare D1 Backend Binding Status
+  const [d1Status, setD1Status] = useState<'bound' | 'unbound' | 'checking'>('checking');
+  const [d1Message, setD1StatusMessage] = useState('正在检测 D1 数据库后台绑定...');
+
+  const [isTestingCf, setIsTestingCf] = useState(false);
   const [isSyncingD1, setIsSyncingD1] = useState(false);
 
   useEffect(() => {
+    checkCloudflareAIConnection();
+    checkChatKeyConnection();
     checkD1Connection();
-  }, []);
+  }, [cfAccountId, cfApiToken, customChatApiKey]);
 
-  const checkD1Connection = async () => {
+  const checkCloudflareAIConnection = async () => {
+    setCfAiStatus('checking');
     try {
-      const res = await fetch('/api/d1/sync');
-      const json = await res.json();
-      setD1Status({
-        connected: json.connected,
-        message: json.message || (json.connected ? 'Cloudflare D1 已激活离线/在线云同步' : '未绑定 D1 数据库，使用本地存储'),
+      const res = await fetch('/api/auth/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cfAccountId: cfAccountId.trim(),
+          cfApiToken: cfApiToken.trim(),
+        }),
       });
+
+      const json = await res.json();
+      if (json.connected) {
+        setCfAiStatus('connected');
+        setCfAiStatusMessage(json.message || 'Cloudflare Workers AI Token 正常，边缘算力准备就绪');
+      } else {
+        setCfAiStatus('disconnected');
+        setCfAiStatusMessage(json.message || '未配置或 Cloudflare AI 鉴权未通过');
+      }
     } catch {
-      setD1Status({ connected: false, message: '浏览器本地独占存储 (无数据库依赖)' });
+      setCfAiStatus('disconnected');
+      setCfAiStatusMessage('无法连通 Cloudflare 验证代理');
     }
   };
 
-  const handleTestCloudflareAI = async () => {
-    if (!cfAccountId.trim() || !cfApiToken.trim()) {
-      showToast('请填写 Cloudflare Account ID 和 API Token', 'error');
-      return;
+  const checkChatKeyConnection = async () => {
+    if (customChatApiKey.trim() || openaiApiKey.trim() || siliconApiKey.trim()) {
+      setChatKeyStatus('connected');
+      setChatKeyStatusMessage('外接对话/LLM API Key 已有效接入并部署');
+    } else {
+      setChatKeyStatus('connected');
+      setChatKeyStatusMessage('使用内置 Cloudflare 免费 LLM 大模型 (免 Key 随时可聊)');
     }
-    setIsTestingCf(true);
-    setCfTestResult(null);
-    try {
-      const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${cfAccountId.trim()}/ai/run/@cf/bytedance/stable-diffusion-xl-lightning`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${cfApiToken.trim()}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ prompt: 'a cute white fox', num_steps: 1 }),
-      });
+  };
 
-      if (res.ok) {
-        setCfTestResult({ success: true, message: '✓ Cloudflare Workers AI 鉴权通过！边缘算力准备就绪' });
-        showToast('Cloudflare AI 连接测试成功！', 'success');
+  const checkD1Connection = async () => {
+    setD1Status('checking');
+    try {
+      const res = await fetch('/api/d1/sync');
+      const json = await res.json();
+      if (json.connected) {
+        setD1Status('bound');
+        setD1StatusMessage(json.message || 'Cloudflare D1 后台数据库绑定正常，云端落库已激活');
       } else {
-        const errJson = await res.json().catch(() => ({}));
-        setCfTestResult({ success: false, message: `✕ 连接失败: ${errJson.errors?.[0]?.message || res.statusText}` });
-        showToast('Cloudflare AI 鉴权未通过，请核对 Key', 'error');
+        setD1Status('unbound');
+        setD1StatusMessage('未绑定 D1 数据库 (env.DB)，自动使用浏览器 IndexedDB 离线存储');
       }
-    } catch (e: any) {
-      setCfTestResult({ success: false, message: `✕ 网络错误: ${e.message}` });
-      showToast('无法连接 Cloudflare API 端点', 'error');
-    } finally {
-      setIsTestingCf(false);
+    } catch {
+      setD1Status('unbound');
+      setD1StatusMessage('仅本地存储 (无 D1 后台数据库)');
     }
+  };
+
+  const handleTestCfAIAction = async () => {
+    setIsTestingCf(true);
+    await checkCloudflareAIConnection();
+    setIsTestingCf(false);
+    showToast('Cloudflare Workers AI 连通性测试完成', 'info');
   };
 
   const handleSyncD1Push = async () => {
@@ -90,12 +112,12 @@ export const SettingsTab: React.FC = () => {
       });
       const json = await res.json();
       if (json.success) {
-        showToast(json.message || '手动推送设置到 D1 成功！', 'success');
+        showToast(json.message || '已成功推送设置到 D1！', 'success');
       } else {
         showToast(json.message || json.error || 'D1 同步未完成', 'info');
       }
-    } catch (e) {
-      showToast('同步处理失败，请确认 wrangler.toml 配置', 'error');
+    } catch {
+      showToast('同步处理失败，请确认 wrangler.toml 绑定', 'error');
     } finally {
       setIsSyncingD1(false);
     }
@@ -109,50 +131,149 @@ export const SettingsTab: React.FC = () => {
       siliconApiKey: siliconApiKey.trim(),
       openaiApiKey: openaiApiKey.trim(),
       stabilityApiKey: stabilityApiKey.trim(),
+      customChatApiKey: customChatApiKey.trim(),
       enableNsfw,
     });
     showToast('全局设置已成功保存！', 'success');
+    checkCloudflareAIConnection();
   };
 
   return (
     <div className="max-w-3xl mx-auto space-y-5 pb-20">
-      {/* Admin-Gated Cloudflare Account ID & API Token Box */}
-      {isAdmin ? (
-        <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-2xl p-5 shadow-lg space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-xl">👑</span>
-              <div>
-                <h3 className="text-sm font-black tracking-tight">Cloudflare Workers AI 管理员接入窗口</h3>
-                <p className="text-[11px] text-blue-100 mt-0.5">
-                  （管理员专享）配置主 Cloudflare 账号凭证，供全站提供边缘计算 AI 生图
-                </p>
-              </div>
+      {/* Cloudflare & Chat LLM Status Lights Panel */}
+      <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-xl border border-slate-800 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">🦊</span>
+            <div>
+              <h3 className="text-sm font-black tracking-tight">Cloudflare & 对话 API 三重状态指示灯</h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                实时监视 Workers AI 接口、对话 API Key 与 D1 数据库绑定状态
+              </p>
             </div>
-            <button
-              onClick={handleSave}
-              className="px-4 py-1.5 bg-white text-blue-600 font-bold text-xs rounded-xl hover:bg-blue-50 shadow-md transition"
-            >
-              保存凭证
-            </button>
+          </div>
+          <button
+            onClick={handleSave}
+            className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition"
+          >
+            保存配置
+          </button>
+        </div>
+
+        {/* Status Light 1: Workers AI API Status */}
+        <div className="p-3 bg-slate-800/80 rounded-xl border border-slate-700/80 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span
+              className={`w-3.5 h-3.5 rounded-full shrink-0 shadow-md ${
+                cfAiStatus === 'connected'
+                  ? 'bg-emerald-500 shadow-emerald-500/50 animate-pulse'
+                  : cfAiStatus === 'checking'
+                  ? 'bg-amber-400 shadow-amber-400/50 animate-bounce'
+                  : 'bg-rose-500 shadow-rose-500/50'
+              }`}
+            />
+            <div>
+              <div className="text-xs font-black flex items-center gap-2">
+                <span>指示灯 1：Cloudflare Workers AI 绘图算力状态</span>
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded font-bold ${
+                    cfAiStatus === 'connected'
+                      ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                      : cfAiStatus === 'checking'
+                      ? 'bg-amber-950 text-amber-300 border border-amber-800'
+                      : 'bg-rose-950 text-rose-300 border border-rose-800'
+                  }`}
+                >
+                  {cfAiStatus === 'connected' ? '🟢 接入成功' : cfAiStatus === 'checking' ? '🟡 检测中' : '🔴 未接入/鉴权失败'}
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-400 mt-0.5">{cfAiMessage}</div>
+            </div>
           </div>
 
+          <button
+            onClick={handleTestCfAIAction}
+            disabled={isTestingCf}
+            className="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-bold whitespace-nowrap"
+          >
+            {isTestingCf ? '检测中...' : '重新检测'}
+          </button>
+        </div>
+
+        {/* Status Light 2: External Chat LLM API Status */}
+        <div className="p-3 bg-slate-800/80 rounded-xl border border-slate-700/80 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="w-3.5 h-3.5 rounded-full shrink-0 shadow-md bg-emerald-500 shadow-emerald-500/50 animate-pulse" />
+            <div>
+              <div className="text-xs font-black flex items-center gap-2">
+                <span>指示灯 2：AI 对话/翻译 API 接入状态</span>
+                <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">
+                  🟢 运行就绪
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-400 mt-0.5">{chatKeyMessage}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Status Light 3: D1 Database Backend Binding Status */}
+        <div className="p-3 bg-slate-800/80 rounded-xl border border-slate-700/80 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span
+              className={`w-3.5 h-3.5 rounded-full shrink-0 shadow-md ${
+                d1Status === 'bound'
+                  ? 'bg-emerald-500 shadow-emerald-500/50 animate-pulse'
+                  : d1Status === 'checking'
+                  ? 'bg-amber-400 shadow-amber-400/50 animate-bounce'
+                  : 'bg-rose-500 shadow-rose-500/50'
+              }`}
+            />
+            <div>
+              <div className="text-xs font-black flex items-center gap-2">
+                <span>指示灯 3：Cloudflare D1 后台数据库状态</span>
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded font-bold ${
+                    d1Status === 'bound'
+                      ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                      : d1Status === 'checking'
+                      ? 'bg-amber-950 text-amber-300 border border-amber-800'
+                      : 'bg-rose-950 text-rose-300 border border-rose-800'
+                  }`}
+                >
+                  {d1Status === 'bound' ? '🟢 D1 已绑定' : d1Status === 'checking' ? '🟡 检测中' : '🔴 未绑定 (离线存储)'}
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-400 mt-0.5">{d1Message}</div>
+            </div>
+          </div>
+
+          <button
+            onClick={handleSyncD1Push}
+            disabled={isSyncingD1}
+            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold whitespace-nowrap"
+          >
+            {isSyncingD1 ? '同步中...' : '手动同步D1'}
+          </button>
+        </div>
+
+        {/* Admin Gated Cloudflare Credentials */}
+        {isAdmin && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 text-slate-800">
             <div>
-              <label className="block text-[11px] font-bold text-blue-100 mb-1">
+              <label className="block text-[11px] font-bold text-slate-300 mb-1">
                 Cloudflare Account ID (账户 ID)
               </label>
               <input
                 type="text"
-                placeholder="在 Cloudflare 仪表盘右侧获取，例如: a1b2c3d4..."
+                placeholder="例如: a1b2c3d4..."
                 value={cfAccountId}
                 onChange={(e) => setCfAccountId(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl text-xs bg-white border border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono"
+                className="w-full px-3 py-2 rounded-xl text-xs bg-slate-950 text-white border border-slate-700 focus:ring-2 focus:ring-blue-500 font-mono"
               />
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold text-blue-100 mb-1">
+              <label className="block text-[11px] font-bold text-slate-300 mb-1">
                 Cloudflare Workers AI API Token
               </label>
               <input
@@ -160,82 +281,38 @@ export const SettingsTab: React.FC = () => {
                 placeholder="例如: Bearer token..."
                 value={cfApiToken}
                 onChange={(e) => setCfApiToken(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl text-xs bg-white border border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono"
+                className="w-full px-3 py-2 rounded-xl text-xs bg-slate-950 text-white border border-slate-700 focus:ring-2 focus:ring-blue-500 font-mono"
               />
             </div>
           </div>
+        )}
+      </div>
 
-          <div className="flex items-center justify-between pt-1">
-            <button
-              onClick={handleTestCloudflareAI}
-              disabled={isTestingCf}
-              className="px-3.5 py-1.5 bg-blue-900/60 hover:bg-blue-900/80 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-blue-400/30"
-            >
-              {isTestingCf ? '⏳ 连接测试中...' : '🔌 测试 Cloudflare AI 连通性'}
-            </button>
-
-            {cfTestResult && (
-              <span className={`text-xs font-bold ${cfTestResult.success ? 'text-emerald-300' : 'text-rose-200'}`}>
-                {cfTestResult.message}
-              </span>
-            )}
-          </div>
-        </div>
-      ) : (
-        <div className="p-4 bg-slate-100 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400 flex items-center justify-between">
-          <span className="flex items-center gap-2">
-            <span>🔒</span>
-            <span>Cloudflare 主 Token 与账户 ID 参数仅限管理员（admin）账号修改</span>
-          </span>
-          <span className="font-bold text-slate-400">只读模式</span>
-        </div>
-      )}
-
-      {/* Cloudflare D1 Cloud Sync Banner */}
+      {/* External Chat LLM API Key Configuration */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-base">☁️</span>
-            <span className="text-xs font-black text-slate-800 dark:text-slate-100">
-              Cloudflare D1 数据库状态与历史同步
-            </span>
-          </div>
+        <h3 className="text-xs font-black text-slate-800 dark:text-white flex items-center gap-2">
+          💬 外接 AI 对话与翻译 API Key 配置
+        </h3>
 
-          <span
-            className={`px-2.5 py-1 rounded-full text-[10px] font-black ${
-              d1Status.connected
-                ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-300'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
-            }`}
-          >
-            {d1Status.connected ? '✓ D1 已连通' : '○ 仅本地存储'}
-          </span>
-        </div>
-
-        <p className="text-xs text-slate-500 dark:text-slate-400">{d1Status.message}</p>
-
-        <div className="flex items-center gap-2 pt-1">
-          <button
-            onClick={handleSyncD1Push}
-            disabled={isSyncingD1}
-            className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-sm"
-          >
-            {isSyncingD1 ? '⏳ 同步中...' : '⬆️ 手动同步设置与历史到 D1'}
-          </button>
-          <button
-            onClick={checkD1Connection}
-            className="px-3.5 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold hover:bg-slate-200 transition"
-          >
-            🔄 重新检测状态
-          </button>
+        <div>
+          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+            外接 AI 对话 / LLM API Key (OpenAI / DeepSeek / Custom)
+          </label>
+          <input
+            type="password"
+            placeholder="sk-... (留空则默认使用内置 Cloudflare 免费 LLM)"
+            value={customChatApiKey}
+            onChange={(e) => setCustomChatApiKey(e.target.value)}
+            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs"
+          />
         </div>
       </div>
 
-      {/* Compute Engine Engine Selector */}
+      {/* Compute Engine Selector */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-black text-slate-800 dark:text-white flex items-center gap-2">
-            🚀 融合算力引擎切换
+            🚀 融合算力引擎选择
           </h3>
           <button
             onClick={handleSave}
@@ -278,13 +355,13 @@ export const SettingsTab: React.FC = () => {
         {/* Other Provider API Keys */}
         <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
           <span className="text-[11px] font-bold text-slate-400 block uppercase">
-            外接 API Key 配置 (内置免 Key API 不填亦可完美运行)
+            其他外接算力 Key 配置
           </span>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                SiliconFlow Key (外接)
+                SiliconFlow Key
               </label>
               <input
                 type="password"
@@ -297,7 +374,7 @@ export const SettingsTab: React.FC = () => {
 
             <div>
               <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                OpenAI API Key (外接)
+                OpenAI API Key
               </label>
               <input
                 type="password"

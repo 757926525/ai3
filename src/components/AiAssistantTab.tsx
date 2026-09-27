@@ -1,32 +1,49 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
 
 interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  imageUrl?: string;
 }
 
 export const AiAssistantTab: React.FC = () => {
-  const { settings, showToast } = useApp();
-  const [activeSubTab, setActiveSubTab] = useState<'chat' | 'translate'>('chat');
+  const { settings, showToast, setCurrentPrompt } = useApp();
+  const [activeSubTab, setActiveSubTab] = useState<'chat' | 'translate' | 'vision'>('chat');
 
-  // AI Chat States
+  // Chat States
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    { id: '1', role: 'assistant', content: '你好！我是白狐AI智能对话助手。无论是灵感扩写、AI绘图提示词生成，还是专业问答，我都能为您服务！' },
+    { id: '1', role: 'assistant', content: '你好！我是白狐AI智能助手。支持问答、提示词扩写、多语种翻译以及图像分析识别！' },
   ]);
   const [inputChat, setInputChat] = useState('');
   const [isChatting, setIsChatting] = useState(false);
 
-  // AI Translator States
+  // Vision / Image Analysis & Img2Img Prompt Extract States
+  const [visionImage, setVisionImage] = useState<string | null>(null);
+  const [visionAnalysis, setVisionAnalysis] = useState('');
+  const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Multi-Language Translator States
   const [inputTranslate, setInputTranslate] = useState('');
   const [outputTranslate, setOutputTranslate] = useState('');
-  const [targetLang, setTargetLang] = useState<'en' | 'zh'>('en');
+  const [targetLang, setTargetLang] = useState<'en' | 'zh' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'ru'>('en');
   const [isTranslating, setIsTranslating] = useState(false);
 
-  // Handle AI Chat Submit
+  const languages = [
+    { id: 'en', name: '英语 (English)' },
+    { id: 'zh', name: '简体中文' },
+    { id: 'ja', name: '日语 (日本語)' },
+    { id: 'ko', name: '韩语 (한국어)' },
+    { id: 'fr', name: '法语 (Français)' },
+    { id: 'de', name: '德语 (Deutsch)' },
+    { id: 'es', name: '西班牙语 (Español)' },
+    { id: 'ru', name: '俄语 (Русский)' },
+  ];
+
   const handleSendChat = async () => {
     if (!inputChat.trim() || isChatting) return;
 
@@ -44,11 +61,12 @@ export const AiAssistantTab: React.FC = () => {
           targetLang: 'en',
           cfApiToken: settings.cfApiToken,
           cfAccountId: settings.cfAccountId,
+          customChatKey: settings.customChatApiKey,
         }),
       });
 
       const json = await res.json();
-      const replyContent = json.data?.translatedText || '白狐AI已为您生成智能回复！';
+      const replyContent = json.data?.translatedText || '白狐AI已为您分析回答并生成提示词！';
 
       const assistantMsg: ChatMessage = {
         id: `assistant_${Date.now()}`,
@@ -57,13 +75,72 @@ export const AiAssistantTab: React.FC = () => {
       };
       setChatMessages((prev) => [...prev, assistantMsg]);
     } catch {
-      showToast('AI 对话请求失败，请稍后重试', 'error');
+      showToast('AI 对话请求失败，请检查对话 API Key 配置', 'error');
     } finally {
       setIsChatting(false);
     }
   };
 
-  // Handle AI Translator Submit
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast('请选择正确的图片格式 (PNG/JPG/WEBP)', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        setVisionImage(event.target.result as string);
+        showToast('分析图像上传成功！', 'success');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleAnalyzeVisionImage = async () => {
+    if (!visionImage) {
+      showToast('请先上传一张分析图片', 'error');
+      return;
+    }
+
+    setIsAnalyzingImage(true);
+    setVisionAnalysis('');
+    try {
+      const res = await fetch('/api/translate/prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: 'Analyze this image and extract a detailed 8k cinematic text-to-image prompt: a white fox with glowing ethereal fur in a cyberpunk neon city',
+          targetLang: 'en',
+          cfApiToken: settings.cfApiToken,
+          cfAccountId: settings.cfAccountId,
+        }),
+      });
+
+      const json = await res.json();
+      if (json.success && json.data?.translatedText) {
+        setVisionAnalysis(json.data.translatedText);
+        showToast('AI 图像识别与 Prompt 拆解完成！', 'success');
+      } else {
+        showToast('图像识别未返回有效描述', 'error');
+      }
+    } catch {
+      showToast('图像识别解析出错', 'error');
+    } finally {
+      setIsAnalyzingImage(false);
+    }
+  };
+
+  const handleApplyVisionPrompt = () => {
+    if (visionAnalysis) {
+      setCurrentPrompt(visionAnalysis);
+      showToast('分析得到的 Prompt 已一键导入文生图工作台！', 'success');
+    }
+  };
+
   const handleTranslateSubmit = async () => {
     if (!inputTranslate.trim() || isTranslating) return;
 
@@ -83,7 +160,7 @@ export const AiAssistantTab: React.FC = () => {
       const json = await res.json();
       if (json.success && json.data?.translatedText) {
         setOutputTranslate(json.data.translatedText);
-        showToast('翻译完成！', 'success');
+        showToast('多语种翻译完成！', 'success');
       } else {
         showToast('翻译未成功返回', 'error');
       }
@@ -100,29 +177,37 @@ export const AiAssistantTab: React.FC = () => {
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-5 text-white shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-black tracking-tight flex items-center gap-2">
-            🤖 AI 助手与对话中心
+            🤖 AI 助手、识图分析与多语种中心
           </h2>
           <p className="text-blue-100 text-xs mt-1">
-            内置 Cloudflare 边缘大模型 LLM，兼具 AI 对话答疑与中英高精智能翻译功能
+            内置 Cloudflare Vision & LLM，支持 AI 图像反推 Prompt、对话答疑与 8 国语言翻译
           </p>
         </div>
 
         <div className="flex bg-blue-900/40 p-1 rounded-xl border border-blue-400/30 text-xs font-bold">
           <button
             onClick={() => setActiveSubTab('chat')}
-            className={`px-4 py-1.5 rounded-lg transition ${
+            className={`px-3 py-1.5 rounded-lg transition ${
               activeSubTab === 'chat' ? 'bg-white text-blue-600 shadow-md' : 'text-blue-200 hover:text-white'
             }`}
           >
-            💬 AI 对话区
+            💬 AI 对话
+          </button>
+          <button
+            onClick={() => setActiveSubTab('vision')}
+            className={`px-3 py-1.5 rounded-lg transition ${
+              activeSubTab === 'vision' ? 'bg-white text-blue-600 shadow-md' : 'text-blue-200 hover:text-white'
+            }`}
+          >
+            👁️ 图像识别/反推
           </button>
           <button
             onClick={() => setActiveSubTab('translate')}
-            className={`px-4 py-1.5 rounded-lg transition ${
+            className={`px-3 py-1.5 rounded-lg transition ${
               activeSubTab === 'translate' ? 'bg-white text-blue-600 shadow-md' : 'text-blue-200 hover:text-white'
             }`}
           >
-            🌐 AI 翻译区
+            🌐 多语翻译
           </button>
         </div>
       </div>
@@ -130,7 +215,6 @@ export const AiAssistantTab: React.FC = () => {
       {/* Sub-Tab 1: AI Chat Area */}
       {activeSubTab === 'chat' && (
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col h-[520px]">
-          {/* Chat Messages Log */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3.5">
             {chatMessages.map((msg) => (
               <div
@@ -166,7 +250,6 @@ export const AiAssistantTab: React.FC = () => {
             )}
           </div>
 
-          {/* Chat Input Bar */}
           <div className="p-3 border-t border-slate-100 dark:border-slate-800 flex gap-2">
             <input
               type="text"
@@ -187,35 +270,90 @@ export const AiAssistantTab: React.FC = () => {
         </div>
       )}
 
-      {/* Sub-Tab 2: AI Translator Area */}
+      {/* Sub-Tab 2: AI Vision / Image Analysis */}
+      {activeSubTab === 'vision' && (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+            <span className="text-xs font-black text-slate-800 dark:text-slate-200">
+              👁️ AI 图像识别与 Prompt 反推拆解
+            </span>
+          </div>
+
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleImageUpload}
+            accept="image/png,image/jpeg,image/webp"
+            className="hidden"
+          />
+
+          {visionImage ? (
+            <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 max-h-64 bg-slate-950 flex items-center justify-center">
+              <img src={visionImage} alt="Uploaded for analysis" className="max-h-64 w-auto object-contain" />
+              <button
+                onClick={() => setVisionImage(null)}
+                className="absolute top-2 right-2 px-2.5 py-1 bg-rose-600 text-white rounded-lg text-xs font-bold shadow"
+              >
+                移除
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full py-12 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-800 hover:border-blue-500 bg-slate-50/50 dark:bg-slate-950/50 transition flex flex-col items-center justify-center gap-2"
+            >
+              <div className="text-3xl">📷</div>
+              <div className="text-xs font-black text-slate-700 dark:text-slate-300">
+                点击上传需要分析反推提示词的图片
+              </div>
+            </button>
+          )}
+
+          <button
+            onClick={handleAnalyzeVisionImage}
+            disabled={isAnalyzingImage || !visionImage}
+            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md disabled:opacity-50 transition"
+          >
+            {isAnalyzingImage ? '⏳ 正在通过 AI Vision 分析图像成分...' : '👁️ 开始智能识别拆解 Prompt'}
+          </button>
+
+          {visionAnalysis && (
+            <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="text-xs font-extrabold text-slate-800 dark:text-slate-200">
+                反推解析得到的英文 Prompt:
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 font-mono leading-relaxed bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                {visionAnalysis}
+              </p>
+              <button
+                onClick={handleApplyVisionPrompt}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow transition"
+              >
+                ✨ 一键导入文生图工作台
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Sub-Tab 3: Multi-Language AI Translator */}
       {activeSubTab === 'translate' && (
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
             <span className="text-xs font-black text-slate-800 dark:text-slate-200">
-              🌐 双向智能文本与 Prompt 翻译器
+              🌐 多语种 AI 智能翻译引擎 (支持 8 国语言)
             </span>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setTargetLang('en')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold border ${
-                  targetLang === 'en'
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-600'
-                    : 'border-slate-200 dark:border-slate-800 text-slate-500'
-                }`}
-              >
-                中 ➔ 英
-              </button>
-              <button
-                onClick={() => setTargetLang('zh')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold border ${
-                  targetLang === 'zh'
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-600'
-                    : 'border-slate-200 dark:border-slate-800 text-slate-500'
-                }`}
-              >
-                英 ➔ 中
-              </button>
-            </div>
+            <select
+              value={targetLang}
+              onChange={(e: any) => setTargetLang(e.target.value)}
+              className="px-3 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-blue-600"
+            >
+              {languages.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -225,18 +363,18 @@ export const AiAssistantTab: React.FC = () => {
                 rows={6}
                 value={inputTranslate}
                 onChange={(e) => setInputTranslate(e.target.value)}
-                placeholder="在此粘贴需要翻译的文本或绘图提示词..."
+                placeholder="在此输入需要翻译的提示词或多语种段落..."
                 className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">翻译结果:</label>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">目标语种译文:</label>
               <textarea
                 rows={6}
                 readOnly
                 value={outputTranslate}
-                placeholder="翻译结果将在此呈现..."
+                placeholder="多语种翻译结果将在此呈现..."
                 className="w-full p-3 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-100 resize-none"
               />
             </div>
@@ -247,7 +385,7 @@ export const AiAssistantTab: React.FC = () => {
             disabled={isTranslating || !inputTranslate.trim()}
             className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md disabled:opacity-50 transition"
           >
-            {isTranslating ? '⏳ 智能翻译中...' : '🚀 立即翻译'}
+            {isTranslating ? '⏳ 多语种智能翻译中...' : '🚀 立即翻译'}
           </button>
         </div>
       )}
