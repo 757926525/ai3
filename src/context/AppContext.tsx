@@ -23,6 +23,8 @@ import { PRESET_MODELS, DEFAULT_SETTINGS } from '@/lib/constants';
 import { StylePreset, STYLE_PRESETS } from '@/lib/stylePresets';
 import { LoraPreset, LORA_PRESETS } from '@/lib/loraPresets';
 
+const WORKSPACE_PERSIST_KEY = 'fox_ai_3_workspace_state';
+
 interface AppContextType {
   settings: UserSettings;
   updateSettings: (newSettings: Partial<UserSettings>) => void;
@@ -64,7 +66,7 @@ interface AppContextType {
   history: GeneratedImage[];
   isGenerating: boolean;
   lastGeneratedImage: GeneratedImage | null;
-  generateImage: (type: 'text-to-image' | 'image-to-image' | 'edit-image', extraParams?: any) => Promise<void>;
+  generateImage: (type: 'text-to-image' | 'image-to-image', extraParams?: any) => Promise<void>;
   deleteHistoryItem: (id: string) => void;
   clearHistory: () => void;
 
@@ -87,7 +89,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [models, setModels] = useState<AIModel[]>(PRESET_MODELS);
   const [selectedModel, setSelectedModel] = useState<AIModel>(PRESET_MODELS[0]);
 
-  const [currentPrompt, setCurrentPrompt] = useState('');
+  const [currentPrompt, setCurrentPrompt] = useState('a majestic white fox with glowing blue ethereal fur, cyberpunk neon background');
   const [negativePrompt, setNegativePrompt] = useState(DEFAULT_SETTINGS.defaultNegativePrompt);
 
   const [selectedStyle, setSelectedStyle] = useState<StylePreset>(STYLE_PRESETS[0]);
@@ -97,7 +99,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [aspectRatio, setAspectRatio] = useState('1:1');
   const [steps, setSteps] = useState(25);
-  const [guidance, setGuidance] = useState(8.0);
+  const [guidance, setGuidance] = useState(7.0);
   const [batchCount, setBatchCount] = useState(1);
 
   const [history, setHistory] = useState<GeneratedImage[]>([]);
@@ -107,6 +109,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [drafts, setDrafts] = useState<PromptDraft[]>([]);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
+  // Auto-restore complete workstation state on refresh
   useEffect(() => {
     const loadedSettings = getStoredSettings();
     setSettings(loadedSettings);
@@ -124,6 +127,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setAuth({ isLoggedIn: true, username, token });
     }
 
+    // Restore Workstation State
+    try {
+      const savedWorkspace = localStorage.getItem(WORKSPACE_PERSIST_KEY);
+      if (savedWorkspace) {
+        const ws = JSON.parse(savedWorkspace);
+        if (ws.currentPrompt) setCurrentPrompt(ws.currentPrompt);
+        if (ws.negativePrompt) setNegativePrompt(ws.negativePrompt);
+        if (ws.aspectRatio) setAspectRatio(ws.aspectRatio);
+        if (ws.steps) setSteps(ws.steps);
+        if (ws.guidance) setGuidance(ws.guidance);
+        if (ws.styleStrength) setStyleStrength(ws.styleStrength);
+        if (ws.selectedModelId) {
+          const foundM = PRESET_MODELS.find((m) => m.id === ws.selectedModelId);
+          if (foundM) setSelectedModel(foundM);
+        }
+      }
+    } catch {
+      // Ignore
+    }
+
     const favs = getFavoriteModels();
     setModels((prev) =>
       prev.map((m) => ({
@@ -135,6 +158,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     getHistoryItems().then(setHistory);
     setDrafts(getStoredDrafts());
   }, []);
+
+  // Dual-Write Workstation State to LocalStorage on change
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stateToSave = {
+        currentPrompt,
+        negativePrompt,
+        selectedModelId: selectedModel.id,
+        selectedStyleId: selectedStyle.id,
+        aspectRatio,
+        steps,
+        guidance,
+        styleStrength,
+      };
+      localStorage.setItem(WORKSPACE_PERSIST_KEY, JSON.stringify(stateToSave));
+    }
+  }, [currentPrompt, negativePrompt, selectedModel, selectedStyle, aspectRatio, steps, guidance, styleStrength]);
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setToast({ message, type });
@@ -187,7 +227,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
-  const generateImage = async (type: 'text-to-image' | 'image-to-image' | 'edit-image', extraParams?: any) => {
+  const generateImage = async (type: 'text-to-image' | 'image-to-image', extraParams?: any) => {
     if (!currentPrompt.trim()) {
       showToast('请输入有效的正向提示词', 'error');
       return;
@@ -199,9 +239,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let combinedPrompt = currentPrompt;
     if (selectedStyle && selectedStyle.promptBoost) {
       combinedPrompt = `${combinedPrompt}, ${selectedStyle.promptBoost}`;
-    }
-    if (selectedLora && selectedLora.triggerWords) {
-      combinedPrompt = `${combinedPrompt}, ${selectedLora.triggerWords}`;
     }
 
     let combinedNegative = negativePrompt;
@@ -220,9 +257,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       guidance,
       batchCount,
       aspectRatio,
+      enableNsfw: settings.enableNsfw ?? true,
       siliconApiKey: settings.siliconApiKey,
       openaiApiKey: settings.openaiApiKey,
-      stabilityApiKey: settings.stabilityApiKey,
       cfApiToken: settings.cfApiToken,
       cfAccountId: settings.cfAccountId,
       ...extraParams,
@@ -265,7 +302,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setHistory(updatedHistory);
         showToast('画面生成成功！', 'success');
       } else {
-        showToast(json.error || '生成失败，请检查参数或网络', 'error');
+        showToast(json.error || '生成失败，请检查配置或网络', 'error');
       }
     } catch (e: any) {
       showToast('调用 API 发生异常，请重试', 'error');

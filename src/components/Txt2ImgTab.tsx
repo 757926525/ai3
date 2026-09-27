@@ -34,6 +34,10 @@ export const Txt2ImgTab: React.FC = () => {
     generateImage,
     isGenerating,
     lastGeneratedImage,
+    drafts,
+    saveCurrentAsDraft,
+    loadDraft,
+    deleteDraft,
     settings,
     showToast,
   } = useApp();
@@ -46,7 +50,10 @@ export const Txt2ImgTab: React.FC = () => {
   const [isUpscaling, setIsUpscaling] = useState(false);
   const [upscaledUrl, setUpscaledUrl] = useState<string | null>(null);
 
-  // Advanced Generator Tuning Panel States ("应有尽有")
+  // Drafts Modal Drawer State
+  const [showDraftsDrawer, setShowDraftsDrawer] = useState(false);
+
+  // Advanced Generator Tuning Panel States
   const [showAdvancedTuning, setShowAdvancedTuning] = useState(false);
   const [sampler, setSampler] = useState('Euler a');
   const [scheduler, setScheduler] = useState('Karras');
@@ -114,7 +121,7 @@ export const Txt2ImgTab: React.FC = () => {
       } else {
         showToast(json.error || '翻译未完成', 'error');
       }
-    } catch (e: any) {
+    } catch {
       showToast('网络开小差了，请重试', 'error');
     } finally {
       setIsTranslating(false);
@@ -132,7 +139,7 @@ export const Txt2ImgTab: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          text: `Please turn this simple image prompt into a highly detailed 8k cinematic AI art prompt: "${currentPrompt}"`,
+          text: currentPrompt,
           targetLang: 'en',
           cfApiToken: settings.cfApiToken,
           cfAccountId: settings.cfAccountId,
@@ -141,9 +148,9 @@ export const Txt2ImgTab: React.FC = () => {
       const json = await res.json();
       if (json.success && json.data?.translatedText) {
         setCurrentPrompt(json.data.translatedText);
-        showToast('五维画质润色完成！', 'success');
+        showToast('五维画质扩写润色完成！', 'success');
       }
-    } catch (e) {
+    } catch {
       showToast('润色处理失败', 'error');
     } finally {
       setIsEnhancingPrompt(false);
@@ -171,7 +178,7 @@ export const Txt2ImgTab: React.FC = () => {
       } else {
         showToast(json.error || '超分处理失败', 'error');
       }
-    } catch (e: any) {
+    } catch {
       showToast('超分服务暂时不可用', 'error');
     } finally {
       setIsUpscaling(false);
@@ -182,7 +189,7 @@ export const Txt2ImgTab: React.FC = () => {
 
   return (
     <div className="space-y-4 pb-20">
-      {/* Compact Model Bar */}
+      {/* Compact Model Selector Bar */}
       <div className="bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <ModelSelector />
       </div>
@@ -202,10 +209,18 @@ export const Txt2ImgTab: React.FC = () => {
 
               <div className="flex items-center gap-1.5">
                 <button
-                  onClick={() => setCurrentPrompt('')}
-                  className="px-2 py-1 text-[11px] text-slate-500 hover:text-rose-600 rounded-lg transition"
+                  onClick={() => saveCurrentAsDraft()}
+                  className="px-2 py-1 text-[11px] font-bold bg-blue-50 dark:bg-slate-800 text-blue-600 dark:text-blue-300 rounded-lg hover:bg-blue-100 transition"
+                  title="存草稿"
                 >
-                  🗑️ 清空
+                  💾 存草稿
+                </button>
+                <button
+                  onClick={() => setShowDraftsDrawer(true)}
+                  className="px-2 py-1 text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 transition"
+                  title="草稿箱"
+                >
+                  📁 草稿箱 ({drafts.length})
                 </button>
                 <button
                   onClick={handleTranslatePrompt}
@@ -219,7 +234,7 @@ export const Txt2ImgTab: React.FC = () => {
                   disabled={isEnhancingPrompt}
                   className="px-2 py-1 text-[11px] font-bold bg-blue-600 text-white hover:bg-blue-700 rounded-lg shadow-sm transition"
                 >
-                  {isEnhancingPrompt ? '✨' : '✨ 智能润色'}
+                  {isEnhancingPrompt ? '✨' : '✨ 5维扩写'}
                 </button>
               </div>
             </div>
@@ -334,7 +349,7 @@ export const Txt2ImgTab: React.FC = () => {
             )}
           </div>
 
-          {/* Comprehensive Generator Tuning Accordion ("应有尽有" 调优面板) */}
+          {/* Generator Tuning Accordion */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
             <button
               onClick={() => setShowAdvancedTuning(!showAdvancedTuning)}
@@ -343,15 +358,14 @@ export const Txt2ImgTab: React.FC = () => {
               <span className="flex items-center gap-2">
                 <span>🎛️ 高级生成器调优面板 (应有尽有)</span>
                 <span className="text-[10px] px-2 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-                  专业极客
+                  极客模组
                 </span>
               </span>
-              <span>{showAdvancedTuning ? '▲ 折叠' : '▼ 展开高级调优'}</span>
+              <span>{showAdvancedTuning ? '▲ 折叠' : '▼ 展开调优'}</span>
             </button>
 
             {showAdvancedTuning && (
               <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-4 animate-fade-in text-xs">
-                {/* Sampler & Scheduler Selection */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -388,7 +402,6 @@ export const Txt2ImgTab: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Steps, Guidance & CLIP Skip */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <div className="flex justify-between font-bold mb-1">
@@ -437,7 +450,6 @@ export const Txt2ImgTab: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Seed Control & Lock */}
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
                   <div className="flex items-center gap-2 w-full sm:w-auto">
                     <span className="font-bold whitespace-nowrap">🎲 随机种子 (Seed):</span>
@@ -455,7 +467,7 @@ export const Txt2ImgTab: React.FC = () => {
                       onClick={() => setSeed(Math.floor(Math.random() * 899999) + 100000)}
                       className="px-2.5 py-1 bg-slate-200 dark:bg-slate-800 rounded-lg font-bold hover:bg-slate-300"
                     >
-                      🎲 随机换 Seed
+                      🎲 换 Seed
                     </button>
                     <label className="flex items-center gap-1 font-bold cursor-pointer">
                       <input
@@ -466,56 +478,6 @@ export const Txt2ImgTab: React.FC = () => {
                       />
                       <span>锁定 Seed</span>
                     </label>
-                  </div>
-                </div>
-
-                {/* High-Res Fix & Face Restore Controls */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                  <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="font-extrabold flex items-center gap-1.5 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={enableHiresFix}
-                          onChange={(e) => setEnableHiresFix(e.target.checked)}
-                          className="rounded text-blue-600"
-                        />
-                        <span>高清修复 (Hires.fix)</span>
-                      </label>
-                      <span className="text-[10px] text-blue-600 font-bold">{hiresScale}X</span>
-                    </div>
-                    {enableHiresFix && (
-                      <div className="space-y-1.5 pt-1">
-                        <div className="flex justify-between text-[10px]">
-                          <span>重绘幅度:</span>
-                          <span>{hiresDenoising}</span>
-                        </div>
-                        <input
-                          type="range"
-                          min={0.2}
-                          max={0.8}
-                          step={0.05}
-                          value={hiresDenoising}
-                          onChange={(e) => setHiresDenoising(Number(e.target.value))}
-                          className="w-full h-1 bg-slate-200 dark:bg-slate-800 rounded accent-blue-600"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                    <div>
-                      <div className="font-extrabold">👤 面部与细节微调强化</div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">
-                        内置 CodeFormer 美颜与手部矫正
-                      </div>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={enableFaceRestore}
-                      onChange={(e) => setEnableFaceRestore(e.target.checked)}
-                      className="rounded text-blue-600 w-4 h-4"
-                    />
                   </div>
                 </div>
               </div>
@@ -540,8 +502,8 @@ export const Txt2ImgTab: React.FC = () => {
         <div className="lg:col-span-5 space-y-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm min-h-[380px] flex flex-col justify-between">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <span className="text-xs font-black text-slate-800 dark:text-slate-200">
-                🖼️ 实时绘图工作台预览
+              <span className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                <span>🖼️ 实时绘图工作台预览</span>
               </span>
               {activeDisplayImage && (
                 <div className="flex items-center gap-2">
@@ -568,7 +530,7 @@ export const Txt2ImgTab: React.FC = () => {
                 <div className="space-y-4 text-center py-12">
                   <div className="w-14 h-14 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
                   <p className="text-xs text-slate-500 animate-pulse">
-                    正在由融合引擎并行推演...
+                    正在由融合算力引擎并行推演...
                   </p>
                 </div>
               ) : activeDisplayImage ? (
@@ -595,6 +557,64 @@ export const Txt2ImgTab: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Slide-Up Drafts Drawer */}
+      {showDraftsDrawer && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 rounded-t-3xl max-h-[75vh] flex flex-col p-5 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+              <span className="font-black text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                <span>📁 提示词草稿箱 ({drafts.length})</span>
+              </span>
+              <button
+                onClick={() => setShowDraftsDrawer(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center font-bold text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            {drafts.length === 0 ? (
+              <div className="py-12 text-center text-xs text-slate-400 space-y-2">
+                <div>📁 暂无草稿</div>
+                <div>点击正向提示词框旁的「存草稿」按钮即可快捷保存当前提示词与全部参数组合</div>
+              </div>
+            ) : (
+              <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                {drafts.map((d) => (
+                  <div
+                    key={d.id}
+                    className="p-3 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 text-xs"
+                  >
+                    <div className="flex-1 truncate">
+                      <div className="font-bold truncate text-slate-800 dark:text-slate-200">{d.title}</div>
+                      <div className="text-[10px] text-slate-400 truncate mt-0.5">{d.prompt}</div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => {
+                          loadDraft(d);
+                          setShowDraftsDrawer(false);
+                        }}
+                        className="px-3 py-1.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700"
+                      >
+                        载入
+                      </button>
+                      <button
+                        onClick={() => deleteDraft(d.id)}
+                        className="px-2.5 py-1.5 bg-rose-50 text-rose-600 rounded-xl font-bold hover:bg-rose-100"
+                      >
+                        删除
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
