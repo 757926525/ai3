@@ -33,6 +33,29 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Auto-translate Chinese prompt to English for precise image-to-image synthesis
+    let cleanPrompt = prompt.trim();
+    if (/[\u4e00-\u9fa5]/.test(cleanPrompt)) {
+      try {
+        const gtxUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(cleanPrompt)}`;
+        const gtxRes = await fetchWithRetry(gtxUrl, { timeoutMs: 5000, maxRetries: 1 });
+        if (gtxRes.ok) {
+          const json = await gtxRes.json();
+          if (Array.isArray(json) && Array.isArray(json[0])) {
+            const translatedSegments = json[0]
+              .map((item: any) => (Array.isArray(item) && item[0] ? item[0] : ''))
+              .filter(Boolean);
+            if (translatedSegments.length > 0) {
+              const translated = translatedSegments.join('').trim();
+              if (translated) cleanPrompt = translated;
+            }
+          }
+        }
+      } catch {
+        // Fallback
+      }
+    }
+
     const cfApiToken = clientCfToken || process.env.CLOUDFLARE_API_TOKEN;
     const cfAccountId = clientCfAccount || process.env.CLOUDFLARE_ACCOUNT_ID;
 
@@ -59,7 +82,7 @@ export async function POST(req: NextRequest) {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            prompt: prompt.trim(),
+            prompt: cleanPrompt,
             image: Array.from(bytes),
             strength: Number(strength) || 0.65,
             num_steps: safeNumSteps,
@@ -96,7 +119,7 @@ export async function POST(req: NextRequest) {
 
     // 2. HIGH-FIDELITY FREE ENGINE FALLBACK FOR IMG2IMG
     try {
-      const imgGuidedPrompt = `(reference composition:1.3), ${prompt.trim()}, masterpiece, best quality, 8k resolution, cinematic lighting`;
+      const imgGuidedPrompt = `(reference composition:1.3), ${cleanPrompt}, masterpiece, best quality, 8k resolution, cinematic lighting`;
       const encodedPrompt = encodeURIComponent(imgGuidedPrompt);
       const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&seed=${Math.floor(
         Math.random() * 899999

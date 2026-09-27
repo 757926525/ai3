@@ -46,7 +46,34 @@ export async function POST(req: NextRequest) {
 
     const targetLangName = targetLangMap[finalTargetLang] || 'English';
 
-    // 1. Cloudflare LLM Multi-Language Translation
+    // 1. Fast, Precise Google GTX Translation Engine
+    try {
+      const gtxTarget = finalTargetLang === 'zh' ? 'zh-CN' : finalTargetLang;
+      const gtxUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${gtxTarget}&dt=t&q=${encodeURIComponent(cleanText)}`;
+      const gtxRes = await fetchWithRetry(gtxUrl, { timeoutMs: 8000, maxRetries: 2 });
+
+      if (gtxRes.ok) {
+        const json = await gtxRes.json();
+        if (Array.isArray(json) && Array.isArray(json[0])) {
+          const translatedSegments = json[0]
+            .map((item: any) => (Array.isArray(item) && item[0] ? item[0] : ''))
+            .filter(Boolean);
+          if (translatedSegments.length > 0) {
+            const translatedText = translatedSegments.join('').trim().replace(/^["']|["']$/g, '');
+            if (translatedText) {
+              return NextResponse.json({
+                success: true,
+                data: { translatedText, originalText: cleanText, targetLang: finalTargetLang, engine: 'Google GTX Engine' },
+              });
+            }
+          }
+        }
+      }
+    } catch {
+      // Fallback
+    }
+
+    // 2. Cloudflare LLM Multi-Language Translation Fallback
     if (cfApiToken && cfAccountId) {
       try {
         const cfEndpoint = `https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/ai/run/@cf/meta/llama-3.1-8b-instruct`;
@@ -72,7 +99,7 @@ export async function POST(req: NextRequest) {
           if (translated) {
             return NextResponse.json({
               success: true,
-              data: { translatedText: translated.replace(/^["']|["']$/g, '') },
+              data: { translatedText: translated.replace(/^["']|["']$/g, ''), engine: 'Cloudflare Llama 3.1' },
             });
           }
         }
@@ -81,18 +108,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 2. Open Translation API Fallback
+    // 3. MyMemory Translation API Fallback
     try {
-      const langPair = hasChinese ? 'zh|en' : 'en|zh';
+      const langPair = hasChinese ? `zh|${finalTargetLang}` : `en|${finalTargetLang}`;
       const myMemoryUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(cleanText)}&langpair=${encodeURIComponent(langPair)}`;
       const res = await fetchWithRetry(myMemoryUrl, { timeoutMs: 8000, maxRetries: 2 });
       if (res.ok) {
         const json = await res.json();
         const translated = json?.responseData?.translatedText;
-        if (translated && typeof translated === 'string') {
+        if (translated && typeof translated === 'string' && !translated.includes('NO QUERY SPECIFIED')) {
           return NextResponse.json({
             success: true,
-            data: { translatedText: translated },
+            data: { translatedText: translated.trim(), engine: 'MyMemory API' },
           });
         }
       }

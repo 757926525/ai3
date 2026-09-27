@@ -64,8 +64,33 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Auto-translate Chinese prompt to English to guarantee maximum image accuracy across all AI models
+    let workingPrompt = prompt.trim();
+    if (/[\u4e00-\u9fa5]/.test(workingPrompt)) {
+      try {
+        const gtxUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(workingPrompt)}`;
+        const gtxRes = await fetchWithRetry(gtxUrl, { timeoutMs: 5000, maxRetries: 1 });
+        if (gtxRes.ok) {
+          const json = await gtxRes.json();
+          if (Array.isArray(json) && Array.isArray(json[0])) {
+            const translatedSegments = json[0]
+              .map((item: any) => (Array.isArray(item) && item[0] ? item[0] : ''))
+              .filter(Boolean);
+            if (translatedSegments.length > 0) {
+              const translated = translatedSegments.join('').trim();
+              if (translated) workingPrompt = translated;
+            }
+          }
+        }
+      } catch {
+        // Fallback to dictionary preprocessor
+      }
+    }
+
     if (enhancePrompt) {
-      prompt = parseAndWeightPrompt(prompt, styleStrength);
+      prompt = parseAndWeightPrompt(workingPrompt, styleStrength);
+    } else {
+      prompt = workingPrompt;
     }
 
     negativePrompt = mergeNegativePrompts(negativePrompt, DEFAULT_SETTINGS.defaultNegativePrompt, enableNsfw);
