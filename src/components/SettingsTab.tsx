@@ -52,7 +52,7 @@ export const SettingsTab: React.FC = () => {
       const json = await res.json();
       if (json.connected) {
         setCfAiStatus('connected');
-        setCfAiStatusMessage(json.message || 'Cloudflare Workers AI Token 正常，边缘算力准备就绪');
+        setCfAiStatusMessage(json.message || 'Cloudflare Workers AI 鉴权正常，边缘算力准备就绪');
       } else {
         setCfAiStatus('disconnected');
         setCfAiStatusMessage(json.message || '未配置或 Cloudflare AI 鉴权未通过');
@@ -66,7 +66,7 @@ export const SettingsTab: React.FC = () => {
   const checkChatKeyConnection = async () => {
     if (customChatApiKey.trim() || openaiApiKey.trim() || siliconApiKey.trim()) {
       setChatKeyStatus('connected');
-      setChatKeyStatusMessage('外接对话/LLM API Key 已有效接入并部署');
+      setChatKeyStatusMessage('外接对话/LLM API Key 已有效保存并处于激活状态');
     } else {
       setChatKeyStatus('connected');
       setChatKeyStatusMessage('使用内置 Cloudflare 免费 LLM 大模型 (免 Key 随时可聊)');
@@ -96,6 +96,12 @@ export const SettingsTab: React.FC = () => {
     await checkCloudflareAIConnection();
     setIsTestingCf(false);
     showToast('Cloudflare Workers AI 连通性测试完成', 'info');
+  };
+
+  const handleSaveChatApiKey = () => {
+    updateSettings({ customChatApiKey: customChatApiKey.trim() });
+    checkChatKeyConnection();
+    showToast('对话 API Key 已保存并校验生效！', 'success');
   };
 
   const handleSyncD1Push = async () => {
@@ -136,10 +142,21 @@ export const SettingsTab: React.FC = () => {
     });
     showToast('全局设置已成功保存！', 'success');
     checkCloudflareAIConnection();
+    checkChatKeyConnection();
   };
 
   return (
     <div className="max-w-3xl mx-auto space-y-5 pb-20">
+      {/* Cloudflare Pages Environment Variable Binding Explanation Banner */}
+      <div className="bg-gradient-to-r from-blue-900 to-slate-900 border border-blue-500/30 rounded-2xl p-4 text-white text-xs space-y-2">
+        <div className="font-black text-sm text-blue-300 flex items-center gap-2">
+          <span>⚡ Cloudflare 后台一键绑定免输入说明</span>
+        </div>
+        <p className="text-slate-300 leading-relaxed">
+          Cloudflare Workers AI 绘图算力<span className="text-amber-300 font-bold">只需在 Cloudflare Pages 后台「设置 ➔ 环境变量」中绑定</span> <code className="bg-slate-800 px-1.5 py-0.5 rounded text-blue-200">CLOUDFLARE_ACCOUNT_ID</code> 与 <code className="bg-slate-800 px-1.5 py-0.5 rounded text-blue-200">CLOUDFLARE_API_TOKEN</code>，重新部署后全站即可免前台输入直接生效！
+        </p>
+      </div>
+
       {/* Cloudflare & Chat LLM Status Lights Panel */}
       <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-xl border border-slate-800 space-y-4">
         <div className="flex items-center justify-between">
@@ -288,11 +305,19 @@ export const SettingsTab: React.FC = () => {
         )}
       </div>
 
-      {/* External Chat LLM API Key Configuration */}
+      {/* External Chat LLM API Key Configuration with Dedicated Save Button */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
-        <h3 className="text-xs font-black text-slate-800 dark:text-white flex items-center gap-2">
-          💬 外接 AI 对话与翻译 API Key 配置
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-black text-slate-800 dark:text-white flex items-center gap-2">
+            💬 外接 AI 对话与翻译 API Key 配置
+          </h3>
+          <button
+            onClick={handleSaveChatApiKey}
+            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition"
+          >
+            💾 保存对话 Key
+          </button>
+        </div>
 
         <div>
           <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -308,11 +333,11 @@ export const SettingsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Compute Engine Selector */}
+      {/* Compute Engine Selector with Unrestricted Annotations */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-black text-slate-800 dark:text-white flex items-center gap-2">
-            🚀 融合算力引擎选择
+            🚀 融合算力引擎选择 (🔥 自由艺术/不限限制算力)
           </h3>
           <button
             onClick={handleSave}

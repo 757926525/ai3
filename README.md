@@ -10,19 +10,20 @@
 
 1. **面板固定标题**：面板标题及全站品牌固定显示为 **白狐AI三**。
 2. **多端融合算力引擎**：
-   - 默认集成 **Pollinations 免费算力池**（免 API Key，随时即用）。
-   - 支持集成 **Cloudflare Workers AI**（边缘计算推理）。
-   - 支持接入 **SiliconFlow 硅基流动**、**OpenAI DALL-E 3**、**Stability AI**、**Fal.ai** 与 **HuggingFace**。
-   - 包含智能降级与重试机制，算力异常时明确提示错误，无卡死或静默失败。
+   - 默认集成 **Pollinations 免费自由艺术算力池**（免 API Key，支持全品类无限制创作）。
+   - 支持集成 **Cloudflare Workers AI** 边缘极速推理。
+   - 支持接入 **SiliconFlow 硅基流动**、**OpenAI DALL-E 3** 与外接对话/LLM Key。
+   - 包含三重实时状态指示灯 (🟢/🟡/🔴)，随时掌控算力与数据库连通性。
 3. **移动优先交互**：
-   - 紧凑型顶部大模型快速滑动选择与底部抽屉模式。
-   - 正向与负向提示词词库输入、一键 **中英智能互译**、**五维 Prompt 画质润色**。
-   - 核心画质调节棒（风格强度、采样步数、引导系数 CFG）、画幅预设与 **自定义 Width / Height 像素滑动条**。
-   - 支持 **画质超分 2X (Upscale)** 处理与 **批量多张生成**。
-4. **Cloudflare D1 数据库云同步（可选）**：
+   - 紧凑型顶部大模型快速选择与 30+ 预置模型库（标注「支持中文生图」与「免费免 Key」）。
+   - 正向与负向提示词词库输入、一键 **中英智能互译**、**五维 Prompt 结构化扩写**。
+   - 核心画质调节棒、画幅预设与 **自定义 Width / Height 像素滑动条**。
+   - **AI 助手中心**：内置 AI 智能问答对话、AI Vision 图像识别/Prompt 反推与 8 国语言多语种翻译。
+4. **Cloudflare 后台一键绑定（免前台输入）**：
+   - 支持直接在 Cloudflare Pages 仪表盘「设置 ➔ 环境变量」中绑定 `CLOUDFLARE_ACCOUNT_ID` 与 `CLOUDFLARE_API_TOKEN`，重新部署后全站免手动输入密钥自动连通！
+5. **Cloudflare D1 数据库云同步（可选）**：
    - 默认采用浏览器本地 **IndexedDB**（结合 WebP 图片压缩技术），零数据库即可完整运行。
-   - 绑定 Cloudflare D1 数据库后，系统自动并支持一键**手动同步设置、收藏与历史记录**，并在设置页面实时检测呈现连通状态。
-5. **完整多平台部署能力**：支持 Cloudflare Pages、Vercel、Docker 及压缩包一键部署。
+   - 绑定 Cloudflare D1 数据库后，系统自动并支持一键**手动同步设置与历史记录**。
 
 ---
 
@@ -58,7 +59,14 @@ npx wrangler d1 create baihu-ai-d1
 npx wrangler d1 execute baihu-ai-d1 --file=./schema.sql
 ```
 
-### 步骤 2：Cloudflare Pages 一键构建部署
+### 步骤 2：在 Cloudflare Pages 仪表盘配置环境变量
+
+在 Cloudflare Pages 项目后台 `Settings ➔ Environment variables` 中配置：
+- `CLOUDFLARE_ACCOUNT_ID`：账户 ID
+- `CLOUDFLARE_API_TOKEN`：Cloudflare AI API Token
+- `ADMIN_PASSWORD`：（可选）管理员初始密码 (默认 `admin888`)
+
+### 步骤 3：一键构建部署
 
 ```bash
 # 执行 Cloudflare Pages 原生适配构建
@@ -67,11 +75,6 @@ npm run pages:build
 # 使用 Wrangler 部署到 Cloudflare Pages
 npx wrangler pages deploy .vercel/output/static --project-name=baihu-ai-three
 ```
-
-环境变量建议在 Cloudflare Pages 后台设置中添加：
-- `CLOUDFLARE_API_TOKEN`
-- `CLOUDFLARE_ACCOUNT_ID`
-- `ADMIN_PASSWORD` (默认密码为 `admin888`)
 
 ---
 
@@ -103,24 +106,13 @@ docker-compose up -d --build
 
 | 变量名 | 必填 | 默认值 | 说明 |
 | :--- | :---: | :---: | :--- |
+| `ADMIN_USERNAME` | 否 | `admin` | 管理员登录用户名 |
 | `ADMIN_PASSWORD` | 否 | `admin888` | 管理员登录初始密码 |
 | `JWT_SECRET` | 否 | `baihu-fox-ai-3-secret` | 用于本地 Token 签署的密钥 |
 | `CLOUDFLARE_API_TOKEN` | 否 | - | Cloudflare Workers AI 访问 Token |
 | `CLOUDFLARE_ACCOUNT_ID` | 否 | - | Cloudflare Account ID |
 | `SILICONFLOW_API_KEY` | 否 | - | SiliconFlow 硅基流动 API Key |
 | `OPENAI_API_KEY` | 否 | - | OpenAI DALL-E 3 官方 Key |
-| `STABILITY_API_KEY` | 否 | - | Stability AI 官方 Key |
-
----
-
-## 🛡️ 常见问题与排查指南
-
-1. **出图提示词不符合要求？**
-   - 答：系统已内置正向提示词权重预处理（核心主体 1.35 权重注入），建议使用「🌐 中英互译」或「✨ 智能润色」将中文需求转为英文描述。
-2. **Cloudflare D1 数据库显示“仅本地存储”？**
-   - 答：若未绑定 D1 数据库，项目会自动降级为浏览器 IndexedDB 本地存储，完全不影响生图与历史功能；需使用 D1 请在 Cloudflare Pages 设置中绑定 `DB` 变量。
-3. **夜间模式切换无效？**
-   - 答：项目已全面升级 CSS `@custom-variant dark` 响应机制，在手机与桌面端均能瞬间生效。
 
 ---
 
