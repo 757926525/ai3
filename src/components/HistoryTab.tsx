@@ -5,7 +5,7 @@ import { useApp } from '@/context/AppContext';
 import { GeneratedImage } from '@/types';
 
 export const HistoryTab: React.FC = () => {
-  const { history, deleteHistoryItem, clearHistory, showToast, setCurrentPrompt } = useApp();
+  const { history, deleteHistoryItem, clearHistory, showToast, setCurrentPrompt, setNegativePrompt, setSelectedModel, models } = useApp();
   const [selectedImage, setSelectedImage] = useState<GeneratedImage | null>(null);
 
   // Single deletion modal state
@@ -21,9 +21,19 @@ export const HistoryTab: React.FC = () => {
     showToast('提示词已复制到剪贴板！', 'success');
   };
 
-  const handleReusePrompt = (prompt: string) => {
-    setCurrentPrompt(prompt);
-    showToast('提示词已载入文生图工作台！', 'info');
+  const handleOneClickRedraw = (item: GeneratedImage) => {
+    if (item.params?.prompt) {
+      setCurrentPrompt(item.params.prompt);
+    }
+    if (item.params?.negativePrompt) {
+      setNegativePrompt(item.params.negativePrompt);
+    }
+    if (item.params?.model) {
+      const foundM = models.find((m) => m.name === item.params.model || m.id === item.params.model);
+      if (foundM) setSelectedModel(foundM);
+    }
+    showToast('已一键将历史参数与 Prompt 填入绘图工作台！', 'success');
+    setSelectedImage(null);
   };
 
   const confirmSingleDelete = () => {
@@ -68,7 +78,7 @@ export const HistoryTab: React.FC = () => {
             📜 已生成图像历史档案 ({history.length})
           </h2>
           <p className="text-blue-100 text-xs mt-1">
-            采用浏览器 IndexedDB 大容量无损存储，支持批量管理与一键清理
+            采用浏览器 IndexedDB 大容量无损存储，支持一键载入参数重绘与 Cloudflare D1 云端同步
           </p>
         </div>
 
@@ -129,7 +139,7 @@ export const HistoryTab: React.FC = () => {
             暂无已存历史记录
           </div>
           <div className="text-xs text-slate-400">
-            在「文生图」或「图生图」中生成的画像会自动归档保存在此处
+            在「文生图」中生成的画像会自动归档保存在此处，支持一键重绘
           </div>
         </div>
       ) : (
@@ -184,7 +194,7 @@ export const HistoryTab: React.FC = () => {
         </div>
       )}
 
-      {/* Modal 1: Single Image Deletion Confirmation Dialog */}
+      {/* Single Image Deletion Modal */}
       {imageToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
@@ -218,7 +228,7 @@ export const HistoryTab: React.FC = () => {
         </div>
       )}
 
-      {/* Modal 2: Batch Deletion Confirmation Dialog */}
+      {/* Batch Deletion Modal */}
       {showBatchDeleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
@@ -252,7 +262,7 @@ export const HistoryTab: React.FC = () => {
         </div>
       )}
 
-      {/* Modal 3: Detail Viewer */}
+      {/* Image Detail Viewer with One-Click Redraw */}
       {selectedImage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-2xl w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto shadow-2xl">
@@ -310,10 +320,10 @@ export const HistoryTab: React.FC = () => {
                   📋 复制提示词
                 </button>
                 <button
-                  onClick={() => handleReusePrompt(selectedImage.params?.prompt || '')}
-                  className="px-3 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700"
+                  onClick={() => handleOneClickRedraw(selectedImage)}
+                  className="px-3.5 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 shadow-md"
                 >
-                  ⚡ 复用提示词绘图
+                  ⚡ 一键快捷绘图 (装载参数)
                 </button>
                 <a
                   href={selectedImage.imageUrl}

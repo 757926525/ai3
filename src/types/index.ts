@@ -23,6 +23,7 @@ export interface AIModel {
   isCustomAdded?: boolean;
   isFree?: boolean;
   needsApiKey?: boolean;
+  supportsChinesePrompt?: boolean;
   recommendedReason?: string;
 }
 

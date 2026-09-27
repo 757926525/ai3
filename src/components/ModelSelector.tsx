@@ -59,13 +59,9 @@ export const ModelSelector: React.FC<CompactModelBarProps> = ({ onOpenFullModal 
           className="px-3 py-1.5 rounded-xl bg-blue-600 text-white font-extrabold text-xs whitespace-nowrap flex items-center gap-1.5 shadow-sm shrink-0"
         >
           <span>🎯 {selectedModel.translatedName || selectedModel.name}</span>
-          {selectedModel.isFree ? (
+          {selectedModel.supportsChinesePrompt && (
             <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500 text-white font-bold">
-              免费
-            </span>
-          ) : (
-            <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500 text-white font-bold">
-              需Key
+              支持中文生图
             </span>
           )}
           <span className="text-[10px] opacity-80">▼</span>
@@ -82,13 +78,9 @@ export const ModelSelector: React.FC<CompactModelBarProps> = ({ onOpenFullModal 
             }`}
           >
             <span>{m.translatedName || m.name}</span>
-            {m.isFree ? (
+            {m.supportsChinesePrompt && (
               <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-extrabold">
-                [免Key]
-              </span>
-            ) : (
-              <span className="text-[9px] text-slate-400 font-medium">
-                [配Key]
+                [中文生图]
               </span>
             )}
           </button>
@@ -101,9 +93,9 @@ export const ModelSelector: React.FC<CompactModelBarProps> = ({ onOpenFullModal 
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
               <div>
                 <span className="font-black text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                  <span>🤖 AI 绘图 30+ 预置大模型全库</span>
+                  <span>🤖 AI 绘图预置大模型全库</span>
                 </span>
-                <span className="text-[11px] text-slate-400">默认展示 30 款模型，标注「免费免 Key」与「需配置 Key」</span>
+                <span className="text-[11px] text-slate-400">已标出「支持中文生图」、「免费免 Key」与「需配置 Key」模型</span>
               </div>
               <button
                 onClick={() => setShowDrawer(false)}
@@ -177,13 +169,14 @@ export const ModelSelector: React.FC<CompactModelBarProps> = ({ onOpenFullModal 
                   <div>
                     <div className="text-xs font-bold flex items-center gap-2">
                       <span>{m.translatedName || m.name}</span>
-                      {m.isFree ? (
+                      {m.supportsChinesePrompt && (
                         <span className="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-300 text-[10px] font-bold">
-                          免费免 Key
+                          支持中文生图
                         </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-300 text-[10px] font-bold">
-                          需配 Key
+                      )}
+                      {m.isFree && (
+                        <span className="px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-300 text-[10px] font-bold">
+                          免费免 Key
                         </span>
                       )}
                     </div>
