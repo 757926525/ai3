@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type TabType = 'txt2img' | 'img2img' | 'models' | 'history' | 'settings';
+export type TabType = 'txt2img' | 'ai' | 'models' | 'history' | 'settings';
 
 interface MobileTabBarProps {
   activeTab: TabType;
@@ -10,7 +10,7 @@ interface MobileTabBarProps {
 export const MobileTabBar: React.FC<MobileTabBarProps> = ({ activeTab, setActiveTab }) => {
   const tabs: { id: TabType; label: string; icon: string }[] = [
     { id: 'txt2img', label: '文生图', icon: '🎨' },
-    { id: 'img2img', label: '图生图', icon: '🖼️' },
+    { id: 'ai', label: 'AI 助手', icon: '🤖' },
     { id: 'models', label: '模型库', icon: '📚' },
     { id: 'history', label: '历史', icon: '📜' },
     { id: 'settings', label: '设置', icon: '⚙️' },

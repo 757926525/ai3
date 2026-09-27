@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Navbar, TabType } from '@/components/Navbar';
 import { MobileTabBar } from '@/components/MobileTabBar';
 import { Txt2ImgTab } from '@/components/Txt2ImgTab';
-import { Img2ImgTab } from '@/components/Img2ImgTab';
+import { AiAssistantTab } from '@/components/AiAssistantTab';
 import { ModelSelector } from '@/components/ModelSelector';
 import { HistoryTab } from '@/components/HistoryTab';
 import { SettingsTab } from '@/components/SettingsTab';
@@ -37,7 +37,7 @@ export default function Home() {
           {/* Main Content Workspace */}
           <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 transition-all duration-300">
             {activeTab === 'txt2img' && <Txt2ImgTab />}
-            {activeTab === 'img2img' && <Img2ImgTab />}
+            {activeTab === 'ai' && <AiAssistantTab />}
             {activeTab === 'models' && <ModelSelector />}
             {activeTab === 'history' && <HistoryTab />}
             {activeTab === 'settings' && <SettingsTab />}
