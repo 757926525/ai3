@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchWithRetry, parseErrorResponse } from '@/lib/fetchWithRetry';
+import { parseAndWeightPrompt } from '@/lib/promptPreprocessor';
 
 export const runtime = 'edge';
 
@@ -119,7 +120,8 @@ export async function POST(req: NextRequest) {
 
     // 2. HIGH-FIDELITY FREE ENGINE FALLBACK FOR IMG2IMG
     try {
-      const imgGuidedPrompt = `(reference composition:1.3), ${cleanPrompt}, masterpiece, best quality, 8k resolution, cinematic lighting`;
+      const enhancedClean = parseAndWeightPrompt(cleanPrompt, Number(strength) || 0.65);
+      const imgGuidedPrompt = `(reference composition:1.3), ${enhancedClean}`;
       const encodedPrompt = encodeURIComponent(imgGuidedPrompt);
       const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&seed=${Math.floor(
         Math.random() * 899999
