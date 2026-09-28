@@ -1,0 +1,40 @@
+name: Build Cloudflare Pages Deploy Zip
+
+on:
+  push:
+    branches: [ main, master ]
+  release:
+    types: [ created, published ]
+  workflow_dispatch:
+
+jobs:
+  build-and-artifact:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Build Cloudflare Pages Assets
+        run: npm run pages:build
+
+      - name: Package Cloudflare Pages Assets Zip
+        run: |
+          cd .vercel/output/static
+          zip -r ../../../cloudflare-pages-deploy.zip . *
+
+      - name: Upload Artifact to GitHub Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudflare-pages-deploy
+          path: cloudflare-pages-deploy.zip
+          retention-days: 30

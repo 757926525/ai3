@@ -22,7 +22,7 @@
    - **🔞 成人内容生成开关**：开关开启后解禁敏感艺术词限制，智能过滤并防止黑图。
    - **AI 助手中心**：内置 AI 智能问答对话、AI Vision 图像识别/Prompt 反推与 8 国语言多语种翻译。
 4. **📱 手机一键直接部署（零电脑·零终端·零编译）**：
-   - 专门提供预编译打包好的 Cloudflare Pages 资源 Zip 压缩包，手机下载后直接在 Cloudflare 控制台网页上传即可成功上线！
+   - 提供 GitHub Actions 自动构建的部署包下载，手机下载后直接在 Cloudflare 控制台网页上传即可成功上线！
 5. **本地/云端持久化存储**：
    - 默认采用浏览器 **IndexedDB**（配合 WebP 自动压缩），零数据库也能完整运行。
    - 绑定 Cloudflare D1 数据库后，系统自动并支持一键**手动同步设置与历史记录**。
@@ -47,19 +47,33 @@
 
 ### 📱 方式一：手机/电脑免终端直连部署 (首选·最简单·零电脑需求)
 
-无需电脑、无需运行任何终端命令行、无需配置 Node 环境！直接使用手机浏览器即可 1 分钟快速完成部署上线！
+无需电脑、无需运行任何终端命令行、无需配置 Node 环境！使用手机或电脑浏览器获取文件后，1 分钟快速完成部署上线！
 
-#### 步骤 1：直接下载预编译 Pages 资产 Zip 包
-点击下方任意预编译包地址直接下载到手机/电脑本地：
-- 📦 **直接部署 Zip 资产包下载地址**：[https://github.com/your-username/baihu-ai-three/releases/download/v1.0.0/cloudflare-pages-deploy.zip](https://github.com/your-username/baihu-ai-three/releases/download/v1.0.0/cloudflare-pages-deploy.zip) *(或在仓库 Releases 页面下载 `cloudflare-pages-deploy.zip`)*
+#### 📌 真实文件获取路径 (提供 3 种真实获取方式)：
 
-#### 步骤 2：用手机/电脑浏览器登录 Cloudflare 控制台
-1. 在手机或电脑浏览器打开 [Cloudflare 控制台](https://dash.cloudflare.com)。
+- **路径 1：从 GitHub Actions 构件下载真实 ZIP 包 (随时最新·推荐)**
+  1. 打开本仓库页面 ➔ 点击顶部导航栏 **Actions** 标签。
+  2. 在左侧 Workflow 列表中点击 **Build Cloudflare Pages Deploy Zip**。
+  3. 点击列表中最新的构建记录 ➔ 下滑到页面底部的 **Artifacts (构件)** 区域。
+  4. 点击 **`cloudflare-pages-deploy.zip`** 即可将编译好的真实部署包下载到手机或电脑！
+
+- **路径 2：从 GitHub Releases 页面下载附件**
+  1. 打开本仓库首页 ➔ 点击右侧 **Releases** 链接。
+  2. 在最新的 Release 版本的 Assets 附件列表中，点击 **`cloudflare-pages-deploy.zip`** 即可下载。
+
+- **路径 3：从仓库命令一键生成 ZIP**
+  若你有电脑环境，只需在项目根目录运行 `npm run pages:zip`，即可在根目录自动生成 `cloudflare-pages-deploy.zip`！
+
+---
+
+#### 🚀 部署步骤：在 Cloudflare 控制台网页端直接上传部署
+
+1. 打开手机或电脑浏览器，登录 [Cloudflare 控制台](https://dash.cloudflare.com)。
 2. 点击侧边栏 **Workers & Pages** ➔ 点击 **Create application** ➔ 切换到 **Pages** 标签页。
 3. 点击 **Upload assets** (上传资产)。
-4. **Project name** 随意填写项目名称（例如 `baihu-ai-three`）。
-5. 点击上传按钮，选择刚才下载的 `cloudflare-pages-deploy.zip` 压缩包文件（或将 `.vercel/output/static` 解压文件夹拖入）。
-6. 点击 **Deploy site** 按钮，系统自动解压部署，秒级生成上线网址！
+4. **Project name** 填写项目名称（例如 `baihu-ai-three`）。
+5. 点击上传按钮，选择上述下载好的 `cloudflare-pages-deploy.zip` 压缩包（或直接将压缩包拖入上传框）。
+6. 点击 **Deploy site** 按钮，Cloudflare 自动部署，秒级生成可用上线网址！
 
 ---
 
