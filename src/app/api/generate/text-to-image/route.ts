@@ -30,7 +30,13 @@ function mapResolutionToBucket(w: number, h: number): { width: number; height: n
   return { width: 1024, height: 1024, aspectRatio: '1:1' };
 }
 
-function mapModelToPollinations(modelId: string): string {
+function mapModelToPollinations(modelId: string, styleId?: string): string {
+  if (styleId) {
+    if (styleId === 'photorealistic' || styleId === 'vintage_film') return 'flux-realism';
+    if (styleId === 'anime_v2' || styleId === 'ghibli_magic' || styleId === 'pixel_retro') return 'flux-anime';
+    if (styleId === 'unreal_3d') return 'flux-3d';
+  }
+
   if (!modelId) return 'flux';
   const id = modelId.toLowerCase();
 
@@ -48,13 +54,13 @@ function mapModelToPollinations(modelId: string): string {
   return 'flux';
 }
 
-function mapModelToCloudflare(modelId: string): string {
+function mapModelToCloudflare(modelId: string, styleId?: string): string {
   if (modelId && modelId.startsWith('@cf/')) return modelId;
   const id = (modelId || '').toLowerCase();
   if (id.includes('lightning') || id.includes('turbo') || id.includes('lcm') || id.includes('schnell')) {
     return '@cf/bytedance/stable-diffusion-xl-lightning';
   }
-  if (id.includes('anime') || id.includes('dreamshaper')) {
+  if (id.includes('anime') || id.includes('dreamshaper') || styleId === 'anime_v2' || styleId === 'ghibli_magic') {
     return '@cf/lykon/dreamshaper-8-lcm';
   }
   return '@cf/stabilityai/stable-diffusion-xl-base-1.0';
@@ -72,6 +78,7 @@ export async function POST(req: NextRequest) {
       customWidth,
       customHeight,
       model = '@cf/stabilityai/stable-diffusion-xl-base-1.0',
+      styleId,
       sampler,
       steps = 25,
       guidance = 7.0,
@@ -206,7 +213,7 @@ export async function POST(req: NextRequest) {
       // 0. Cloudflare Pages Functions Native AI Binding (env.AI)
       if (cfWorkersAI && typeof cfWorkersAI.run === 'function') {
         try {
-          const cfModel = mapModelToCloudflare(model);
+          const cfModel = mapModelToCloudflare(model, styleId);
           const isFastModel = cfModel.includes('lightning') || cfModel.includes('lcm') || cfModel.includes('turbo');
           const maxCfSteps = isFastModel ? 8 : 20;
           const safeCfSteps = Math.min(Math.max(Number(steps) || (isFastModel ? 4 : 20), 1), maxCfSteps);
@@ -338,7 +345,7 @@ export async function POST(req: NextRequest) {
       // 3. Pollinations High Quality Free Pool Failover
       try {
         const dynamicTimeout = Math.max(35000, Number(steps) * 1000);
-        const polModel = mapModelToPollinations(model);
+        const polModel = mapModelToPollinations(model, styleId);
         const encodedPrompt = encodeURIComponent(prompt.trim());
         const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?nologo=true&seed=${currentSeed}&width=${resBucket.width}&height=${resBucket.height}&model=${polModel}`;
 

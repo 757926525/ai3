@@ -250,6 +250,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prompt: combinedPrompt,
       negativePrompt: combinedNegative,
       model: selectedModel.id,
+      styleId: selectedStyle.id,
       provider: selectedModel.provider,
       computeEngine: settings.computeEngine,
       styleStrength,
