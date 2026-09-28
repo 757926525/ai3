@@ -21,8 +21,8 @@
    - 实时工作台预览区直接位于提示词下方，移动端操作流畅顺手。
    - **🔞 成人内容生成开关**：开关开启后解禁敏感艺术词限制，智能过滤并防止黑图。
    - **AI 助手中心**：内置 AI 智能问答对话、AI Vision 图像识别/Prompt 反推与 8 国语言多语种翻译。
-4. **Cloudflare Pages Functions 资源集完美适配**：
-   - 完美适配 Cloudflare Pages 后台资源集（D1 数据库 `env.DB`、Workers AI `env.AI`），无需手动编写 API 逻辑即可零延迟调用 Cloudflare 边缘能力。
+4. ** Cloudflare 网页直接上传 Zip 部署（最简推荐）**：
+   - 支持直接从 GitHub 下载项目 ZIP 压缩包，无需 Git 命令行即可通过 Cloudflare 网页端一键拖投上传部署成功！
 5. **本地/云端持久化存储**：
    - 默认采用浏览器 **IndexedDB**（配合 WebP 自动压缩），零数据库也能完整运行。
    - 绑定 Cloudflare D1 数据库后，系统自动并支持一键**手动同步设置与历史记录**。
@@ -45,9 +45,38 @@
 
 ## 📖 完整部署指南
 
-### 方式一：Cloudflare 代码上传部署 (CLI Code Upload Deployment - 推荐)
+### ⚡ 方式一：最简 GitHub 压缩包网页直接上传部署 (首选·最简单)
 
-直接通过 Cloudflare CLI (`wrangler`) 将打包编译后的代码直接上传部署至 Cloudflare Pages 全球边缘节点。
+无需任何命令行经验或 Git 绑定，只需在 GitHub 下载 ZIP 压缩包，直接在 Cloudflare 控制台网页上传即可秒级部署上线！
+
+#### 步骤 1：下载项目 ZIP 压缩包
+1. 在 GitHub 页面点击右上角 **Code** ➔ 点击 **Download ZIP**（或直接下载 Releases 压缩包）。
+2. 解压下载的压缩包到本地目录。
+
+#### 步骤 2：生成 Cloudflare 部署静态资产包
+在解压后的项目目录下打开终端运行：
+```bash
+# 1. 安装项目依赖
+npm install
+
+# 2. 生成 Cloudflare Pages 原生适配包 (.vercel/output/static)
+npm run pages:zip
+```
+运行后，项目中会生成打包好的 `.vercel/output/static` 文件夹（内含包含 Pages Functions 与静态文件的全部部署资产）。
+
+#### 步骤 3：在 Cloudflare 控制台网页端直接上传
+1. 打开 [Cloudflare 控制台仪表盘](https://dash.cloudflare.com)。
+2. 点击侧边栏 **Workers & Pages** ➔ 点击 **Create application** ➔ 切换到 **Pages** 标签页。
+3. 点击 **Upload assets** (上传资产)。
+4. 在 **Project name** 填写项目名称（如 `baihu-ai-three`）。
+5. **拖投上传**：将刚才生成的 `.vercel/output/static` 文件夹（或压缩包）直接拖入上传框中。
+6. 点击 **Deploy site** 按钮，即可瞬间完成部署成功上线！
+
+---
+
+### 方式二：Cloudflare Pages CLI 代码命令行上传部署
+
+通过 Cloudflare CLI (`wrangler`) 一键上传部署至 Cloudflare Pages 全球边缘节点：
 
 ```bash
 # 1. 克隆代码仓库并安装依赖
@@ -58,55 +87,47 @@ npm install
 # 2. 执行 Cloudflare Pages Functions 适配编译
 npm run pages:build
 
-# 3. 使用 Wrangler 一键直传部署至 Cloudflare Pages
+# 3. 使用 Wrangler 命令行一键直传部署
 npx wrangler pages deploy .vercel/output/static --project-name=baihu-ai-three
 ```
 
 #### 🛠️ Cloudflare Pages 仪表盘资源集绑定（D1 数据库 & Workers AI）
 在 Cloudflare 仪表盘控制台打开你的 Pages 项目 `baihu-ai-three`：
 1. **绑定 D1 数据库 (`env.DB`)**：
-   - 侧边栏进入 **Settings ➔ Functions** ➔ 下滑至 **D1 database bindings**。
-   - 点击 **Add binding**：
-     - **Variable name (变量名)**：填写 `DB`（必须大写）
+   - 进入 **Settings ➔ Functions** ➔ **D1 database bindings** ➔ **Add binding**：
+     - **Variable name (变量名)**：`DB`（必须大写）
      - **D1 database (数据库)**：选择你创建的 D1 数据库（如 `baihu_ai_db`）
 2. **绑定 Workers AI 资源集 (`env.AI`)**：
-   - 侧边栏进入 **Settings ➔ Functions** ➔ 下滑至 **Workers AI bindings**。
-   - 点击 **Add binding**：
-     - **Variable name (变量名)**：填写 `AI`（必须大写）
+   - 进入 **Settings ➔ Functions** ➔ **Workers AI bindings** ➔ **Add binding**：
+     - **Variable name (变量名)**：`AI`（必须大写）
 3. **配置环境变量**：
    - 进入 **Settings ➔ Environment variables**，添加 `CLOUDFLARE_ACCOUNT_ID` 与 `CLOUDFLARE_API_TOKEN`。
-4. **重新部署**：保存绑定后，重新点击 Deploy 或运行 `npx wrangler pages deploy`，Pages Functions 将自动拥有原生 D1 与 AI 资源访问权限！
 
 ---
 
-### 方式二：Cloudflare Pages Git 拉取部署 (Automated Git Integration)
+### 方式三：Cloudflare Pages Git 自动化拉取部署
 
-此方式通过 GitHub 仓库联动，每次 `git push` 自动触发 Cloudflare Pages 拉取构建。
-
-1. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com)。
-2. 点击侧边栏 **Workers & Pages** ➔ **Create application** ➔ **Pages** ➔ **Connect to Git**。
-3. 选择本仓库。
-4. **Build Settings**:
+1. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com) ➔ **Workers & Pages** ➔ **Create application** ➔ **Pages** ➔ **Connect to Git**。
+2. 选择本 GitHub 仓库。
+3. **Build Settings**:
    - **Framework preset**: `None` (或 `Next.js`)
    - **Build command**: `npm run pages:build`
    - **Build output directory**: `.vercel/output/static`
    - **Environment variables**: `NODE_VERSION=20`
-5. 在 Pages 项目 **Settings ➔ Functions ➔ Compatibility flags** 中添加 `nodejs_compat`。
-6. 同上在 **Functions** 设置中绑定 `DB` (D1) 与 `AI` (Workers AI) 资源集。
+4. 在 Pages 项目 **Settings ➔ Functions ➔ Compatibility flags** 中添加 `nodejs_compat`。
 
 ---
 
-### 方式三：Vercel 及类似 Node.js 平台部署 (Vercel / Netlify / Render / Zeabur)
+### 方式四：Vercel 及类似 Node.js 平台部署 (Vercel / Netlify / Render / Zeabur)
 
 1. 将本仓库 Fork 或 Push 至 GitHub。
 2. 在 [Vercel 控制台](https://vercel.com) 点击 **Add New Project** ➔ 选择本仓库。
 3. Framework Preset 选择 **Next.js**。
-4. 在 Environment Variables 中添加 `CLOUDFLARE_ACCOUNT_ID`、`CLOUDFLARE_API_TOKEN` 或 `OPENAI_API_KEY`（可选）。
-5. 点击 **Deploy**，大约 1 分钟即可完成部署上线。
+4. 在 Environment Variables 中添加对应 Key 即可一键部署。
 
 ---
 
-### 方式四：Wasmer Edge 容器部署 (Wasmer 部署)
+### 方式五：Wasmer Edge 容器部署 (Wasmer 部署)
 
 本项目根目录已内置 Wasmer 标准配置文件 `wasmer.toml`。
 
@@ -123,54 +144,13 @@ wasmer deploy
 
 ---
 
-### 方式五：Docker & Docker Compose 容器部署
-
-仓库内置 Dockerfile（采用 Next.js Standalone 多阶段轻量构建）。
-
-#### 使用 Docker Compose 一键启动 (推荐)
+### 方式六：Docker & Docker Compose 容器部署
 
 ```bash
-# 启动 Docker 容器
+# 使用 Docker Compose 启动容器
 docker-compose up -d --build
 
-# 查看运行状态
-docker-compose ps
-
-# 访问服务
 # 打开浏览器访问 http://localhost:3000
-```
-
-#### 使用原生 Docker 命令构建运行
-
-```bash
-# 构建 Docker 镜像
-docker build -t baihu-ai-three .
-
-# 运行容器
-docker run -d -p 3000:3000 --name baihu-ai-three \
-  -e ADMIN_PASSWORD=admin888 \
-  -e CLOUDFLARE_ACCOUNT_ID=your_id \
-  -e CLOUDFLARE_API_TOKEN=your_token \
-  baihu-ai-three
-```
-
----
-
-## 🛠️ 本地开发与命令行参考
-
-```bash
-# 本地 D1 数据库创建与初始化
-npx wrangler d1 create baihu_ai_db
-npx wrangler d1 execute baihu_ai_db --file=./schema.sql
-
-# 启动本地开发服务器
-npm run dev
-
-# 执行生产打包编译
-npm run build
-
-# 执行 Cloudflare Pages 原生构建
-npm run pages:build
 ```
 
 ---
