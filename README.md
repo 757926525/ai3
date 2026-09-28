@@ -21,8 +21,8 @@
    - 实时工作台预览区直接位于提示词下方，移动端操作流畅顺手。
    - **🔞 成人内容生成开关**：开关开启后解禁敏感艺术词限制，智能过滤并防止黑图。
    - **AI 助手中心**：内置 AI 智能问答对话、AI Vision 图像识别/Prompt 反推与 8 国语言多语种翻译。
-4. ** Cloudflare 网页直接上传 Zip 部署（最简推荐）**：
-   - 支持直接从 GitHub 下载项目 ZIP 压缩包，无需 Git 命令行即可通过 Cloudflare 网页端一键拖投上传部署成功！
+4. **📱 手机一键直接部署（零电脑·零终端·零编译）**：
+   - 专门提供预编译打包好的 Cloudflare Pages 资源 Zip 压缩包，手机下载后直接在 Cloudflare 控制台网页上传即可成功上线！
 5. **本地/云端持久化存储**：
    - 默认采用浏览器 **IndexedDB**（配合 WebP 自动压缩），零数据库也能完整运行。
    - 绑定 Cloudflare D1 数据库后，系统自动并支持一键**手动同步设置与历史记录**。
@@ -45,38 +45,27 @@
 
 ## 📖 完整部署指南
 
-### ⚡ 方式一：最简 GitHub 压缩包网页直接上传部署 (首选·最简单)
+### 📱 方式一：手机/电脑免终端直连部署 (首选·最简单·零电脑需求)
 
-无需任何命令行经验或 Git 绑定，只需在 GitHub 下载 ZIP 压缩包，直接在 Cloudflare 控制台网页上传即可秒级部署上线！
+无需电脑、无需运行任何终端命令行、无需配置 Node 环境！直接使用手机浏览器即可 1 分钟快速完成部署上线！
 
-#### 步骤 1：下载项目 ZIP 压缩包
-1. 在 GitHub 页面点击右上角 **Code** ➔ 点击 **Download ZIP**（或直接下载 Releases 压缩包）。
-2. 解压下载的压缩包到本地目录。
+#### 步骤 1：直接下载预编译 Pages 资产 Zip 包
+点击下方任意预编译包地址直接下载到手机/电脑本地：
+- 📦 **直接部署 Zip 资产包下载地址**：[https://github.com/your-username/baihu-ai-three/releases/download/v1.0.0/cloudflare-pages-deploy.zip](https://github.com/your-username/baihu-ai-three/releases/download/v1.0.0/cloudflare-pages-deploy.zip) *(或在仓库 Releases 页面下载 `cloudflare-pages-deploy.zip`)*
 
-#### 步骤 2：生成 Cloudflare 部署静态资产包
-在解压后的项目目录下打开终端运行：
-```bash
-# 1. 安装项目依赖
-npm install
-
-# 2. 生成 Cloudflare Pages 原生适配包 (.vercel/output/static)
-npm run pages:zip
-```
-运行后，项目中会生成打包好的 `.vercel/output/static` 文件夹（内含包含 Pages Functions 与静态文件的全部部署资产）。
-
-#### 步骤 3：在 Cloudflare 控制台网页端直接上传
-1. 打开 [Cloudflare 控制台仪表盘](https://dash.cloudflare.com)。
+#### 步骤 2：用手机/电脑浏览器登录 Cloudflare 控制台
+1. 在手机或电脑浏览器打开 [Cloudflare 控制台](https://dash.cloudflare.com)。
 2. 点击侧边栏 **Workers & Pages** ➔ 点击 **Create application** ➔ 切换到 **Pages** 标签页。
 3. 点击 **Upload assets** (上传资产)。
-4. 在 **Project name** 填写项目名称（如 `baihu-ai-three`）。
-5. **拖投上传**：将刚才生成的 `.vercel/output/static` 文件夹（或压缩包）直接拖入上传框中。
-6. 点击 **Deploy site** 按钮，即可瞬间完成部署成功上线！
+4. **Project name** 随意填写项目名称（例如 `baihu-ai-three`）。
+5. 点击上传按钮，选择刚才下载的 `cloudflare-pages-deploy.zip` 压缩包文件（或将 `.vercel/output/static` 解压文件夹拖入）。
+6. 点击 **Deploy site** 按钮，系统自动解压部署，秒级生成上线网址！
 
 ---
 
-### 方式二：Cloudflare Pages CLI 代码命令行上传部署
+### 💻 方式二：源码本地编译与 CLI 代码上传部署
 
-通过 Cloudflare CLI (`wrangler`) 一键上传部署至 Cloudflare Pages 全球边缘节点：
+如果你有电脑并希望自行基于源码构建打包：
 
 ```bash
 # 1. 克隆代码仓库并安装依赖
@@ -84,10 +73,10 @@ git clone https://github.com/your-username/baihu-ai-three.git
 cd baihu-ai-three
 npm install
 
-# 2. 执行 Cloudflare Pages Functions 适配编译
+# 2. 生成 Cloudflare Pages 原生部署资产包
 npm run pages:build
 
-# 3. 使用 Wrangler 命令行一键直传部署
+# 3. 使用 Wrangler 命令行直传部署
 npx wrangler pages deploy .vercel/output/static --project-name=baihu-ai-three
 ```
 
