@@ -1,5 +1,15 @@
 // High-Precision Chinese-English Prompt Translator & Dictionary Preprocessor
 const EXACT_PROMPT_DICT: Record<string, string> = {
+  厚涂: 'impasto oil painting style, textured brushstrokes, rich layered pigments',
+  赛璐璐: 'anime cel shading style, crisp clean anime line art, vibrant flat colors',
+  景深: 'bokeh depth of field, sharp focus on subject, beautifully blurred background',
+  '8k': '8k resolution, hyperdetailed, sharp focus',
+  '8K': '8k resolution, hyperdetailed, sharp focus',
+  莫奈: 'Claude Monet impressionism style, vibrant light reflections, painterly texture',
+  毕加索: 'Picasso cubism style, abstract geometric shapes',
+  极简: 'minimalist art design, clean elegant composition',
+  哑光: 'matte finish, soft diffuse lighting',
+  水彩: 'delicate watercolor painting, soft fluid color washes, wet-on-wet technique',
   白狐: 'a majestic white fox with fluffy ethereal fur and glowing blue eyes',
   白狐AI: 'mystical white fox with glowing blue eyes, masterpiece digital painting',
   狐狸: 'a graceful fox with vibrant fur',
@@ -34,7 +44,7 @@ export function parseAndWeightPrompt(prompt: string, styleStrength = 0.65): stri
   let clean = prompt.trim();
   if (!clean) return '';
 
-  // 1. Direct keyword replacements for Chinese terms
+  // 1. Direct keyword replacements for Chinese terms & art style vocabulary
   Object.keys(EXACT_PROMPT_DICT).forEach((key) => {
     if (clean.includes(key)) {
       clean = clean.replaceAll(key, EXACT_PROMPT_DICT[key]);
@@ -55,9 +65,14 @@ export function parseAndWeightPrompt(prompt: string, styleStrength = 0.65): stri
 
 export function mergeNegativePrompts(userNegative?: string, defaultNegative?: string, nsfwEnabled = false): string {
   const custom = (userNegative || '').trim();
-  const builtIn = (defaultNegative || 'blurry, low quality, distorted, bad hands, bad face, deformed, extra fingers, mutated hands, poorly drawn face, poorly drawn hands, missing limbs, bad anatomy, watermark, text, low resolution').trim();
 
-  const safetyFilter = nsfwEnabled ? '' : ', explicit violence, gore, explicit nudity';
+  if (nsfwEnabled) {
+    // When adult content generation is ON, keep negative prompt completely clean without censorship keywords
+    return custom || 'blurry, low quality, distorted';
+  }
+
+  const builtIn = (defaultNegative || 'blurry, low quality, distorted, bad hands, bad face, deformed, extra fingers, mutated hands, poorly drawn face, poorly drawn hands, missing limbs, bad anatomy, watermark, text, low resolution').trim();
+  const safetyFilter = ', explicit violence, gore, explicit nudity, nsfw';
 
   if (!custom) return `${builtIn}${safetyFilter}`;
   return `${custom}, ${builtIn}${safetyFilter}`;

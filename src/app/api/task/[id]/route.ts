@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { taskStore } from '@/lib/taskStore';
 
 export const runtime = 'edge';
-
-// Global Memory & Task Store for Edge Tasks
-const taskMemoryStore = new Map<string, { status: 'processing' | 'completed' | 'failed'; result?: any; error?: string; createdAt: number }>();
 
 export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
@@ -13,10 +11,9 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
       return NextResponse.json({ success: false, error: '缺少任务 ID' }, { status: 400 });
     }
 
-    const task = taskMemoryStore.get(id);
+    const task = taskStore.get(id);
 
     if (!task) {
-      // If task expired or done, return completed simulation status for client continuity
       return NextResponse.json({
         success: true,
         data: {

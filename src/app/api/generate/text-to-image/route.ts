@@ -3,12 +3,12 @@ import { fetchWithRetry, parseErrorResponse } from '@/lib/fetchWithRetry';
 import { parseAndWeightPrompt, mergeNegativePrompts } from '@/lib/promptPreprocessor';
 import { DEFAULT_SETTINGS } from '@/lib/constants';
 import { getCloudflareEnv } from '@/lib/cloudflareEnv';
+import { taskStore } from '@/lib/taskStore';
 
 export const runtime = 'edge';
 
-// Edge Server-Side Task & Hash Cache Memory Store
+// Edge Server-Side Cache Memory Store
 const edgeResultCache = new Map<string, { imageUrls: string[]; timestamp: number }>();
-const taskStore = new Map<string, { status: 'processing' | 'completed' | 'failed'; result?: any; error?: string; createdAt: number }>();
 const CACHE_TTL_MS = 15 * 60 * 1000;
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
@@ -65,26 +65,40 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Auto-translate Chinese prompt to English to guarantee maximum image accuracy across all AI models
+    // 1. English Gatekeeper (英文闸门): Ensure prompt contains ZERO Chinese characters before calling AI image models
     let workingPrompt = prompt.trim();
     if (/[\u4e00-\u9fa5]/.test(workingPrompt)) {
-      try {
-        const gtxUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(workingPrompt)}`;
-        const gtxRes = await fetchWithRetry(gtxUrl, { timeoutMs: 5000, maxRetries: 1 });
-        if (gtxRes.ok) {
-          const json = await gtxRes.json();
-          if (Array.isArray(json) && Array.isArray(json[0])) {
-            const translatedSegments = json[0]
-              .map((item: any) => (Array.isArray(item) && item[0] ? item[0] : ''))
-              .filter(Boolean);
-            if (translatedSegments.length > 0) {
-              const translated = translatedSegments.join('').trim();
-              if (translated) workingPrompt = translated;
+      // First run through dictionary preprocessor for art style terms (厚涂, 赛璐璐, 景深, etc.)
+      workingPrompt = parseAndWeightPrompt(workingPrompt, styleStrength);
+
+      // If Chinese characters remain, auto-translate via Google GTX
+      if (/[\u4e00-\u9fa5]/.test(workingPrompt)) {
+        try {
+          const gtxUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(workingPrompt)}`;
+          const gtxRes = await fetchWithRetry(gtxUrl, { timeoutMs: 5000, maxRetries: 1 });
+          if (gtxRes.ok) {
+            const json = await gtxRes.json();
+            if (Array.isArray(json) && Array.isArray(json[0])) {
+              const translatedSegments = json[0]
+                .map((item: any) => (Array.isArray(item) && item[0] ? item[0] : ''))
+                .filter(Boolean);
+              if (translatedSegments.length > 0) {
+                const translated = translatedSegments.join('').trim();
+                if (translated) workingPrompt = translated;
+              }
             }
           }
+        } catch {
+          // Fallback
         }
-      } catch {
-        // Fallback to dictionary preprocessor
+      }
+
+      // Strict English Gatekeeper Check
+      if (/[\u4e00-\u9fa5]/.test(workingPrompt)) {
+        return NextResponse.json(
+          { success: false, error: '提示词中包含无法翻译的中文词汇，请先进行一键智能翻译后再生图' },
+          { status: 400 }
+        );
       }
     }
 
@@ -177,9 +191,6 @@ export async function POST(req: NextRequest) {
           const cfModel = model.startsWith('@cf/') ? model : '@cf/stabilityai/stable-diffusion-xl-base-1.0';
           const cfEndpoint = `https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/ai/run/${cfModel}`;
 
-          // Sanitize num_steps specifically for Cloudflare Workers AI limits:
-          // - Lightning / LCM models: 4 ~ 8 steps
-          // - SDXL / base models: 1 ~ 20 steps max on Cloudflare AI API
           const isFastModel = cfModel.includes('lightning') || cfModel.includes('lcm') || cfModel.includes('turbo');
           const maxCfSteps = isFastModel ? 8 : 20;
           const safeCfSteps = Math.min(Math.max(Number(steps) || (isFastModel ? 4 : 20), 1), maxCfSteps);
@@ -194,10 +205,8 @@ export async function POST(req: NextRequest) {
             seed: currentSeed,
           };
 
-          // Dynamic timeout based on sampling steps (up to 50s for high step requests)
           const dynamicTimeout = Math.max(35000, Number(steps) * 1000);
 
-          // Exponential backoff retries (3 attempts) on 429/timeouts
           const cfResponse = await fetchWithRetry(cfEndpoint, {
             method: 'POST',
             headers: {
@@ -271,7 +280,7 @@ export async function POST(req: NextRequest) {
       try {
         const dynamicTimeout = Math.max(35000, Number(steps) * 1000);
         const encodedPrompt = encodeURIComponent(prompt.trim());
-        const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${resBucket.width}&height=${resBucket.height}&seed=${currentSeed}&nologo=true&enhance=true&safe=${!enableNsfw}&model=flux`;
+        const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?nologo=true&seed=${currentSeed}&width=${resBucket.width}&height=${resBucket.height}`;
 
         const polResponse = await fetchWithRetry(pollinationsUrl, {
           headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FoxAI/3.0)' },
@@ -281,11 +290,12 @@ export async function POST(req: NextRequest) {
 
         if (polResponse.ok) {
           const arrayBuffer = await polResponse.arrayBuffer();
-          const base64 = arrayBufferToBase64(arrayBuffer);
-          return { url: `data:image/jpeg;base64,${base64}`, providerUsed: 'Pollinations 高清通用算力池 (自动降级补偿)' };
-        } else {
-          attemptedErrors.push(await parseErrorResponse(polResponse, 'Pollinations 兜底算力挂起'));
+          if (arrayBuffer.byteLength > 1000) {
+            const base64 = arrayBufferToBase64(arrayBuffer);
+            return { url: `data:image/jpeg;base64,${base64}`, providerUsed: 'Pollinations 高清通用算力池' };
+          }
         }
+        attemptedErrors.push('Pollinations 算力响应异常');
       } catch (e: any) {
         attemptedErrors.push(`Pollinations 超时: ${e.message}`);
       }
@@ -293,7 +303,7 @@ export async function POST(req: NextRequest) {
       throw new Error(attemptedErrors.join(' | ') || '算力节点处理异常，请检查配额或稍后重试');
     };
 
-    // If asyncTask flag is true (for Vercel Hobby 10s protection), create taskId and resolve in background
+    // If asyncTask flag is true (for Vercel/Cloudflare 10s protection), create taskId and resolve in background
     const taskId = `task_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     if (asyncTask) {
       taskStore.set(taskId, { status: 'processing', createdAt: Date.now() });
