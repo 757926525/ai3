@@ -28,9 +28,6 @@ export async function POST(req: NextRequest) {
     let finalTargetLang = targetLang;
     if (targetLang === 'mutual' || targetLang === 'auto') {
       finalTargetLang = hasChinese ? 'en' : 'zh';
-    } else if (targetLang === 'en' && !hasChinese) {
-      // If user requested default translation but text is already English, toggle to Chinese
-      finalTargetLang = 'zh';
     }
 
     const targetLangMap: Record<string, string> = {
