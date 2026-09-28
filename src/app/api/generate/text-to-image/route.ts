@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { fetchWithRetry, parseErrorResponse } from '@/lib/fetchWithRetry';
 import { parseAndWeightPrompt, mergeNegativePrompts } from '@/lib/promptPreprocessor';
 import { DEFAULT_SETTINGS } from '@/lib/constants';
+import { getCloudflareEnv } from '@/lib/cloudflareEnv';
 
 export const runtime = 'edge';
 
@@ -116,16 +117,59 @@ export async function POST(req: NextRequest) {
     }
 
     // Server-Side Credentials (NEVER exposed to frontend)
-    const cfApiToken = clientCfToken || process.env.CLOUDFLARE_API_TOKEN;
-    const cfAccountId = clientCfAccount || process.env.CLOUDFLARE_ACCOUNT_ID;
-    const siliconApiKey = clientSiliconKey || process.env.SILICONFLOW_API_KEY;
-    const openaiApiKey = clientOpenaiKey || process.env.OPENAI_API_KEY;
+    const cfEnv = getCloudflareEnv();
+    const cfApiToken = clientCfToken || cfEnv.CLOUDFLARE_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
+    const cfAccountId = clientCfAccount || cfEnv.CLOUDFLARE_ACCOUNT_ID || process.env.CLOUDFLARE_ACCOUNT_ID;
+    const siliconApiKey = clientSiliconKey || cfEnv.SILICONFLOW_API_KEY || process.env.SILICONFLOW_API_KEY;
+    const openaiApiKey = clientOpenaiKey || cfEnv.OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+    const cfWorkersAI = cfEnv.AI;
 
     const count = Math.min(Math.max(Number(batchCount) || 1, 1), 4);
     const generatedImages: string[] = [];
 
     const generateSingleWorkerAI = async (currentSeed: number): Promise<{ url: string; providerUsed: string }> => {
       const attemptedErrors: string[] = [];
+
+      // 0. Cloudflare Pages Functions Native AI Binding (env.AI)
+      if (cfWorkersAI && typeof cfWorkersAI.run === 'function') {
+        try {
+          const cfModel = model.startsWith('@cf/') ? model : '@cf/stabilityai/stable-diffusion-xl-base-1.0';
+          const isFastModel = cfModel.includes('lightning') || cfModel.includes('lcm') || cfModel.includes('turbo');
+          const maxCfSteps = isFastModel ? 8 : 20;
+          const safeCfSteps = Math.min(Math.max(Number(steps) || (isFastModel ? 4 : 20), 1), maxCfSteps);
+
+          const cfPayload: any = {
+            prompt: prompt.trim(),
+            negative_prompt: negativePrompt,
+            width: resBucket.width,
+            height: resBucket.height,
+            num_steps: safeCfSteps,
+            guidance: Number(guidance) || 7.5,
+            seed: currentSeed,
+          };
+
+          const aiResult: any = await cfWorkersAI.run(cfModel, cfPayload);
+          if (aiResult) {
+            if (typeof aiResult === 'string') {
+              return { url: aiResult.startsWith('data:') ? aiResult : `data:image/png;base64,${aiResult}`, providerUsed: 'Cloudflare Pages Functions 原生 AI 资源集 (env.AI)' };
+            }
+            if (aiResult instanceof ArrayBuffer) {
+              const base64 = arrayBufferToBase64(aiResult);
+              return { url: `data:image/png;base64,${base64}`, providerUsed: 'Cloudflare Pages Functions 原生 AI 资源集 (env.AI)' };
+            }
+            if (aiResult instanceof Uint8Array) {
+              const base64 = arrayBufferToBase64(aiResult.buffer as ArrayBuffer);
+              return { url: `data:image/png;base64,${base64}`, providerUsed: 'Cloudflare Pages Functions 原生 AI 资源集 (env.AI)' };
+            }
+            if (aiResult.image) {
+              const img = aiResult.image.startsWith('data:') ? aiResult.image : `data:image/png;base64,${aiResult.image}`;
+              return { url: img, providerUsed: 'Cloudflare Pages Functions 原生 AI 资源集 (env.AI)' };
+            }
+          }
+        } catch (e: any) {
+          attemptedErrors.push(`Pages Functions env.AI 异常: ${e.message}`);
+        }
+      }
 
       // 1. Server-Side Direct Cloudflare Workers AI Call
       if (cfApiToken && cfAccountId) {

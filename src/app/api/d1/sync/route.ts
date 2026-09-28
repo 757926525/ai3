@@ -2,16 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'edge';
 
+import { getCloudflareEnv } from '@/lib/cloudflareEnv';
+
 export async function GET(req: NextRequest) {
   try {
-    const env = (process.env as any) || {};
+    const env = getCloudflareEnv();
     const d1 = env.DB;
 
     if (!d1) {
       return NextResponse.json({
         success: false,
         connected: false,
-        message: '未绑定 Cloudflare D1 数据库变量 (env.DB)',
+        message: '未绑定 Cloudflare D1 数据库变量 (env.DB)。请在 Cloudflare Pages 后台设置 -> Functions -> D1 Database Bindings 中添加变量名为 DB 的绑定',
       });
     }
 
@@ -36,7 +38,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { action, username = 'admin', settingsData, favoritesData, historyData } = body;
 
-    const env = (process.env as any) || {};
+    const env = getCloudflareEnv();
     const d1 = env.DB;
 
     if (!d1) {
