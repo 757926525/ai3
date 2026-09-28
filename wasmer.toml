@@ -1,0 +1,14 @@
+[package]
+name = "baihu-ai-three"
+version = "1.0.0"
+description = "Fox AI 3 Drawing Web Application"
+
+[app]
+name = "baihu-ai-three"
+
+[[app.port]]
+port = 3000
+target_port = 3000
+
+[build]
+dockerfile = "Dockerfile"
