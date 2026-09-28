@@ -1,4 +1,4 @@
-// WhiteFox AI Three High-Fidelity Prompt Synthesis Engine Kernel
+// WhiteFox AI Three Structured Prompt Synthesis Kernel (Midjourney v6 / FLUX.1 Standard)
 const EXACT_PROMPT_DICT: Record<string, string> = {
   厚涂: 'impasto oil painting style, textured brushstrokes, rich layered pigments, fine canvas texture',
   赛璐璐: 'anime cel shading style, crisp clean anime line art, vibrant flat colors, Makoto Shinkai key visual',
@@ -42,13 +42,13 @@ const EXACT_PROMPT_DICT: Record<string, string> = {
   Q版: 'chibi cute style, adorable character, rounded features',
 };
 
-// Categorized Quality Boosters for Specific Visual Domains
+// Mainstream Categorized Quality & Lighting Boosters
 const DOMAIN_QUALITY_BOOSTERS: Record<string, string> = {
-  photo: 'raw photo, photorealistic, 8k uhd, 85mm f/1.8 lens, DSLR, natural skin texture, realistic lighting, sharp focus, volumetric shadows, ray tracing',
-  anime: 'masterpiece anime visual, Makoto Shinkai aesthetic, vivid colors, crisp anime line art, flawless anime style, cinematic lighting',
-  art: 'masterpiece digital painting, artistic composition, rich color grading, highly detailed artwork',
-  cg3d: '3d render, Unreal Engine 5, Octane render, 8k 3d asset, subsurface scattering, volumetric fog, path tracing, raytraced reflections',
-  ink: 'traditional Chinese ink wash painting, xuan paper texture, elegant poetic brushstrokes, splash ink accent',
+  photo: 'raw photo, photorealistic, 8k uhd, 85mm f/1.8 lens, DSLR, natural skin texture, realistic studio lighting, well-lit, optimal exposure, sharp focus, volumetric shadows, ray tracing, 8k resolution',
+  anime: 'masterpiece anime visual, Makoto Shinkai aesthetic, vivid rich colors, crisp anime line art, flawless anime style, well-lit, cinematic lighting, 8k resolution',
+  art: 'masterpiece digital painting, artistic composition, rich color balance, well-lit, optimal exposure, highly detailed artwork, 8k resolution',
+  cg3d: '3d render, Unreal Engine 5, Octane render, 8k 3d asset, subsurface scattering, volumetric fog, path tracing, raytraced reflections, well-lit, 8k resolution',
+  ink: 'traditional Chinese ink wash painting, xuan paper texture, elegant poetic brushstrokes, splash ink accent, artistic lighting',
 };
 
 export function parseAndWeightPrompt(prompt: string, styleStrength = 0.65): string {
@@ -80,11 +80,11 @@ export function parseAndWeightPrompt(prompt: string, styleStrength = 0.65): stri
     domainBooster = DOMAIN_QUALITY_BOOSTERS.ink;
   }
 
-  // Ensure prompt has foundational quality keywords without duplication
+  // Ensure prompt has foundational lighting and exposure quality keywords
   if (!lower.includes('masterpiece') && !lower.includes('photorealistic') && !lower.includes('8k')) {
     clean = `${clean}, ${domainBooster}`;
-  } else if (!lower.includes('8k') && !lower.includes('sharp')) {
-    clean = `${clean}, 8k resolution, highly detailed, sharp crystal clear focus`;
+  } else if (!lower.includes('well-lit') && !lower.includes('exposure')) {
+    clean = `${clean}, well-lit, optimal exposure, 8k resolution, highly detailed, sharp crystal clear focus`;
   }
 
   return clean;
@@ -95,10 +95,10 @@ export function mergeNegativePrompts(userNegative?: string, defaultNegative?: st
 
   if (nsfwEnabled) {
     // When adult content generation is ON, keep negative prompt completely clean without censorship keywords
-    return custom || 'blurry, low quality, distorted, dark shadows, underexposed, bad anatomy';
+    return custom || 'blurry, low quality, distorted, dark shadows, underexposed, bad anatomy, overexposed, pitch black background';
   }
 
-  const builtIn = (defaultNegative || 'blurry, low quality, distorted, dark shadows, underexposed, bad hands, bad face, deformed, extra fingers, mutated hands, poorly drawn face, poorly drawn hands, missing limbs, bad anatomy, watermark, text, low resolution').trim();
+  const builtIn = (defaultNegative || 'blurry, low quality, distorted, dark shadows, underexposed, bad hands, bad face, deformed, extra fingers, mutated hands, poorly drawn face, poorly drawn hands, missing limbs, bad anatomy, watermark, text, low resolution, overexposed, pitch black background').trim();
   const safetyFilter = ', explicit violence, gore, explicit nudity, nsfw';
 
   if (!custom) return `${builtIn}${safetyFilter}`;
