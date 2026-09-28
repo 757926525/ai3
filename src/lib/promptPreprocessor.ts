@@ -56,7 +56,7 @@ export function parseAndWeightPrompt(prompt: string, styleStrength = 0.65): stri
 
   // Avoid duplicating quality boosters if already present
   if (!clean.toLowerCase().includes('masterpiece') && !clean.toLowerCase().includes('8k')) {
-    const qualityBoost = 'masterpiece, best quality, highly detailed, 8k resolution, cinematic lighting, sharp focus';
+    const qualityBoost = 'masterpiece, best quality, highly detailed, 8k resolution, cinematic studio lighting, well-lit, optimal exposure, vibrant color grading, sharp crystal clear focus';
     clean = `${clean}, ${qualityBoost}`;
   }
 
@@ -68,10 +68,10 @@ export function mergeNegativePrompts(userNegative?: string, defaultNegative?: st
 
   if (nsfwEnabled) {
     // When adult content generation is ON, keep negative prompt completely clean without censorship keywords
-    return custom || 'blurry, low quality, distorted';
+    return custom || 'blurry, low quality, distorted, dark shadows, underexposed';
   }
 
-  const builtIn = (defaultNegative || 'blurry, low quality, distorted, bad hands, bad face, deformed, extra fingers, mutated hands, poorly drawn face, poorly drawn hands, missing limbs, bad anatomy, watermark, text, low resolution').trim();
+  const builtIn = (defaultNegative || 'blurry, low quality, distorted, dark shadows, underexposed, bad hands, bad face, deformed, extra fingers, mutated hands, poorly drawn face, poorly drawn hands, missing limbs, bad anatomy, watermark, text, low resolution').trim();
   const safetyFilter = ', explicit violence, gore, explicit nudity, nsfw';
 
   if (!custom) return `${builtIn}${safetyFilter}`;

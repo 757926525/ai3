@@ -50,6 +50,7 @@ export const Txt2ImgTab: React.FC = () => {
   const [isGeneratingNegativeSuggest, setIsGeneratingNegativeSuggest] = useState(false);
   const [isUpscaling, setIsUpscaling] = useState(false);
   const [upscaledUrl, setUpscaledUrl] = useState<string | null>(null);
+  const [selectedBatchIndex, setSelectedBatchIndex] = useState(0);
 
   // Drafts Modal Drawer State
   const [showDraftsDrawer, setShowDraftsDrawer] = useState(false);
@@ -276,11 +277,38 @@ export const Txt2ImgTab: React.FC = () => {
           />
         </div>
 
+        {/* Batch Count Selector Group */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
+          <span className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+            <span>⚡ 一次并行生成张数 (最多 4 张):</span>
+          </span>
+          <div className="flex items-center gap-1.5">
+            {[1, 2, 3, 4].map((count) => (
+              <button
+                key={count}
+                onClick={() => setBatchCount(count)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-extrabold border transition ${
+                  batchCount === count
+                    ? 'border-blue-600 bg-blue-600 text-white shadow-md'
+                    : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 hover:bg-slate-100'
+                }`}
+              >
+                {count} 张
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* 3. Real-time Workstation Preview Output Display directly below prompt input area */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm min-h-[380px] flex flex-col justify-between">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <span className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-2">
               <span>🖼️ 实时绘图工作台预览区 (直接位于提示词下方)</span>
+              {lastGeneratedImage?.imageUrls && lastGeneratedImage.imageUrls.length > 1 && (
+                <span className="text-[10px] px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-300 font-extrabold">
+                  矩阵生图: {lastGeneratedImage.imageUrls.length} 张
+                </span>
+              )}
             </span>
             {activeDisplayImage && (
               <div className="flex items-center gap-2">
@@ -307,8 +335,39 @@ export const Txt2ImgTab: React.FC = () => {
               <div className="space-y-4 text-center py-12">
                 <div className="w-14 h-14 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
                 <p className="text-xs text-slate-500 animate-pulse">
-                  正在由融合算力引擎并行推演...
+                  正在由融合算力引擎并行推演生成 {batchCount} 张画作...
                 </p>
+              </div>
+            ) : lastGeneratedImage?.imageUrls && lastGeneratedImage.imageUrls.length > 1 ? (
+              <div className="space-y-4 w-full">
+                {/* Active Main Display Image */}
+                <div className="relative group rounded-xl overflow-hidden bg-slate-950 shadow-lg border border-slate-200 dark:border-slate-800">
+                  <img
+                    src={lastGeneratedImage.imageUrls[selectedBatchIndex] || activeDisplayImage}
+                    alt="Generated AI result"
+                    className="w-full h-auto object-contain max-h-[460px] mx-auto"
+                  />
+                </div>
+
+                {/* 2x2 Batch Grid Gallery */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
+                  {lastGeneratedImage.imageUrls.map((url, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => setSelectedBatchIndex(idx)}
+                      className={`relative rounded-xl overflow-hidden border-2 cursor-pointer transition ${
+                        selectedBatchIndex === idx
+                          ? 'border-blue-600 ring-2 ring-blue-500 shadow-md'
+                          : 'border-slate-200 dark:border-slate-800 opacity-70 hover:opacity-100'
+                      }`}
+                    >
+                      <img src={url} alt={`Batch ${idx + 1}`} className="w-full h-24 object-cover" />
+                      <span className="absolute bottom-1 right-1 bg-black/70 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
+                        #{idx + 1}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : activeDisplayImage ? (
               <div className="space-y-3 w-full">
