@@ -3,6 +3,19 @@ import { fetchWithRetry } from '@/lib/fetchWithRetry';
 
 export const runtime = 'edge';
 
+function decodeHtmlEntities(str: string): string {
+  if (!str) return '';
+  return str
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#x27;/g, "'")
+    .replace(/&#x2F;/g, '/')
+    .replace(/&nbsp;/g, ' ');
+}
+
 export async function POST(req: NextRequest) {
   try {
     const {
@@ -56,7 +69,8 @@ export async function POST(req: NextRequest) {
             .map((item: any) => (Array.isArray(item) && item[0] ? item[0] : ''))
             .filter(Boolean);
           if (translatedSegments.length > 0) {
-            const translatedText = translatedSegments.join('').trim().replace(/^["']|["']$/g, '');
+            const rawText = translatedSegments.join('').trim().replace(/^["']|["']$/g, '');
+            const translatedText = decodeHtmlEntities(rawText);
             if (translatedText) {
               return NextResponse.json({
                 success: true,
@@ -94,9 +108,10 @@ export async function POST(req: NextRequest) {
           const json = await res.json();
           const translated = json?.result?.response?.trim();
           if (translated) {
+            const cleanTranslated = decodeHtmlEntities(translated.replace(/^["']|["']$/g, ''));
             return NextResponse.json({
               success: true,
-              data: { translatedText: translated.replace(/^["']|["']$/g, ''), engine: 'Cloudflare Llama 3.1' },
+              data: { translatedText: cleanTranslated, engine: 'Cloudflare Llama 3.1' },
             });
           }
         }
@@ -114,9 +129,10 @@ export async function POST(req: NextRequest) {
         const json = await res.json();
         const translated = json?.responseData?.translatedText;
         if (translated && typeof translated === 'string' && !translated.includes('NO QUERY SPECIFIED')) {
+          const cleanTranslated = decodeHtmlEntities(translated.trim());
           return NextResponse.json({
             success: true,
-            data: { translatedText: translated.trim(), engine: 'MyMemory API' },
+            data: { translatedText: cleanTranslated, engine: 'MyMemory API' },
           });
         }
       }

@@ -30,6 +30,36 @@ function mapResolutionToBucket(w: number, h: number): { width: number; height: n
   return { width: 1024, height: 1024, aspectRatio: '1:1' };
 }
 
+function mapModelToPollinations(modelId: string): string {
+  if (!modelId) return 'flux';
+  const id = modelId.toLowerCase();
+
+  if (id === 'flux' || id.startsWith('flux-')) {
+    if (id === 'flux-realism') return 'flux-realism';
+    if (id === 'flux-anime') return 'flux-anime';
+    if (id === 'flux-3d') return 'flux-3d';
+    return 'flux';
+  }
+  if (id === 'turbo' || id.includes('turbo') || id.includes('lightning')) return 'turbo';
+  if (id.includes('anime') || id.includes('animagine') || id.includes('ghibli') || id.includes('anything')) return 'flux-anime';
+  if (id.includes('realistic') || id.includes('photorealistic') || id.includes('portrait')) return 'flux-realism';
+  if (id.includes('3d') || id.includes('pixar')) return 'flux-3d';
+
+  return 'flux';
+}
+
+function mapModelToCloudflare(modelId: string): string {
+  if (modelId && modelId.startsWith('@cf/')) return modelId;
+  const id = (modelId || '').toLowerCase();
+  if (id.includes('lightning') || id.includes('turbo') || id.includes('lcm') || id.includes('schnell')) {
+    return '@cf/bytedance/stable-diffusion-xl-lightning';
+  }
+  if (id.includes('anime') || id.includes('dreamshaper')) {
+    return '@cf/lykon/dreamshaper-8-lcm';
+  }
+  return '@cf/stabilityai/stable-diffusion-xl-base-1.0';
+}
+
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
   try {
@@ -144,10 +174,39 @@ export async function POST(req: NextRequest) {
     const generateSingleWorkerAI = async (currentSeed: number): Promise<{ url: string; providerUsed: string }> => {
       const attemptedErrors: string[] = [];
 
+      // 0. OpenAI DALL-E 3 Priority Call if explicitly requested and key available
+      if (openaiApiKey && (model === 'dall-e-3' || model.includes('dall-e'))) {
+        try {
+          const oaiRes = await fetchWithRetry('https://api.openai.com/v1/images/generations', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${openaiApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'dall-e-3',
+              prompt: prompt.trim(),
+              n: 1,
+              size: '1024x1024',
+            }),
+            timeoutMs: 45000,
+            maxRetries: 2,
+          });
+          if (oaiRes.ok) {
+            const oaiJson = await oaiRes.json();
+            if (oaiJson.data && oaiJson.data[0]?.url) {
+              return { url: oaiJson.data[0].url, providerUsed: 'OpenAI DALL-E 3 官方引擎' };
+            }
+          }
+        } catch {
+          // Fallback
+        }
+      }
+
       // 0. Cloudflare Pages Functions Native AI Binding (env.AI)
       if (cfWorkersAI && typeof cfWorkersAI.run === 'function') {
         try {
-          const cfModel = model.startsWith('@cf/') ? model : '@cf/stabilityai/stable-diffusion-xl-base-1.0';
+          const cfModel = mapModelToCloudflare(model);
           const isFastModel = cfModel.includes('lightning') || cfModel.includes('lcm') || cfModel.includes('turbo');
           const maxCfSteps = isFastModel ? 8 : 20;
           const safeCfSteps = Math.min(Math.max(Number(steps) || (isFastModel ? 4 : 20), 1), maxCfSteps);
@@ -188,7 +247,7 @@ export async function POST(req: NextRequest) {
       // 1. Server-Side Direct Cloudflare Workers AI Call
       if (cfApiToken && cfAccountId) {
         try {
-          const cfModel = model.startsWith('@cf/') ? model : '@cf/stabilityai/stable-diffusion-xl-base-1.0';
+          const cfModel = mapModelToCloudflare(model);
           const cfEndpoint = `https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/ai/run/${cfModel}`;
 
           const isFastModel = cfModel.includes('lightning') || cfModel.includes('lcm') || cfModel.includes('turbo');
@@ -279,8 +338,9 @@ export async function POST(req: NextRequest) {
       // 3. Pollinations High Quality Free Pool Failover
       try {
         const dynamicTimeout = Math.max(35000, Number(steps) * 1000);
+        const polModel = mapModelToPollinations(model);
         const encodedPrompt = encodeURIComponent(prompt.trim());
-        const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?nologo=true&seed=${currentSeed}&width=${resBucket.width}&height=${resBucket.height}`;
+        const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?nologo=true&seed=${currentSeed}&width=${resBucket.width}&height=${resBucket.height}&model=${polModel}`;
 
         const polResponse = await fetchWithRetry(pollinationsUrl, {
           headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FoxAI/3.0)' },

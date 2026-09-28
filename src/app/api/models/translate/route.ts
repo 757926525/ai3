@@ -2,6 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'edge';
 
+function decodeHtmlEntities(str: string): string {
+  if (!str) return '';
+  return str
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#x27;/g, "'")
+    .replace(/&#x2F;/g, '/')
+    .replace(/&nbsp;/g, ' ');
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -23,7 +36,8 @@ export async function POST(req: NextRequest) {
             .map((item: any) => (Array.isArray(item) && item[0] ? item[0] : ''))
             .filter(Boolean);
           if (translatedSegments.length > 0) {
-            const translatedText = translatedSegments.join('').trim().replace(/^["']|["']$/g, '');
+            const rawText = translatedSegments.join('').trim().replace(/^["']|["']$/g, '');
+            const translatedText = decodeHtmlEntities(rawText);
             if (translatedText) {
               return NextResponse.json({
                 success: true,
@@ -44,9 +58,10 @@ export async function POST(req: NextRequest) {
       if (res.ok) {
         const json = await res.json();
         if (json?.responseData?.translatedText) {
+          const cleanTranslated = decodeHtmlEntities(json.responseData.translatedText.trim());
           return NextResponse.json({
             success: true,
-            data: { translatedText: json.responseData.translatedText, originalText: text },
+            data: { translatedText: cleanTranslated, originalText: text },
           });
         }
       }

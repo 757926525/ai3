@@ -111,7 +111,8 @@ export const Txt2ImgTab: React.FC = () => {
       const json = await res.json();
       if (json.success && json.data?.translatedText) {
         setCurrentPrompt(json.data.translatedText);
-        showToast('已成功一键中英双向互译！', 'success');
+        const direction = json.data.targetLang === 'zh' ? '英文 ➔ 中文' : '中文 ➔ 英文';
+        showToast(`已成功一键 (${direction}) 转换！`, 'success');
       } else {
         showToast(json.error || '翻译未完成', 'error');
       }
