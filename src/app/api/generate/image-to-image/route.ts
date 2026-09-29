@@ -135,11 +135,13 @@ export async function POST(req: NextRequest) {
 
       if (polResponse.ok) {
         const arrayBuffer = await polResponse.arrayBuffer();
-        const base64 = arrayBufferToBase64(arrayBuffer);
-        return NextResponse.json({
-          success: true,
-          data: { imageUrl: `data:image/jpeg;base64,${base64}`, providerUsed: 'Pollinations 开放算力池 (参考构图重绘)' },
-        });
+        if (arrayBuffer.byteLength > 1500) {
+          const base64 = arrayBufferToBase64(arrayBuffer);
+          return NextResponse.json({
+            success: true,
+            data: { imageUrl: `data:image/jpeg;base64,${base64}`, providerUsed: 'Pollinations 免 Key 高清重绘算力池' },
+          });
+        }
       }
     } catch (e: any) {
       // Fallback

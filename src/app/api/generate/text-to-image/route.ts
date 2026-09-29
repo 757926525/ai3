@@ -357,9 +357,9 @@ export async function POST(req: NextRequest) {
 
         if (polResponse.ok) {
           const arrayBuffer = await polResponse.arrayBuffer();
-          if (arrayBuffer.byteLength > 1000) {
+          if (arrayBuffer.byteLength > 1500) {
             const base64 = arrayBufferToBase64(arrayBuffer);
-            return { url: `data:image/jpeg;base64,${base64}`, providerUsed: 'Pollinations 高清通用算力池' };
+            return { url: `data:image/jpeg;base64,${base64}`, providerUsed: 'Pollinations 免 Key 高清算力池' };
           }
         }
         attemptedErrors.push('Pollinations 算力响应异常');
